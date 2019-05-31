@@ -1,0 +1,5 @@
+#include "smart_jni/smart_jni_log.hpp"
+#include "smart_jni/smart_jni_config.hpp"
+#include "smart_jni/smart_jni_sensor.hpp"
+#include "smart_jni/smart_jni_thread_loop.hpp"
+#include "smart_jni/smart_jni_everything.hpp"

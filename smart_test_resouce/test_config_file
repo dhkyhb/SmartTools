@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<root>
+    <pos_verify_address>smartpeak.cn</pos_verify_address>                         <!-- 远程激活服务地址 -->
+    <pos_verify_port>8080</pos_verify_port>                                     <!-- 远程激活服务端口 -->
+    <pos_verify_timeout>80</pos_verify_timeout>                                 <!-- 远程激活服务超时 -->
+
+    <pos_check_customer_address>kms.basewin.com</pos_check_customer_address>    <!-- 远程切机服务地址 -->
+    <pos_check_customer_port>5050</pos_check_customer_port>                     <!-- 远程切机服务端口 -->
+    <pos_check_customer_timeout>80</pos_check_customer_timeout>                 <!-- 远程切机服务超时 -->
+
+    <model>5</model>                                                            <!-- 0.本地激活 1.远程激活 2.新远程激活 3.BCTC激活 4.切机远程激活 5.拉卡拉激活-->
+    <restart>0</restart>                                                        <!-- 自动重启 大于0就开启自动重启 -->
+    <audio>true</audio>                                                        <!-- 解锁界面语言 true:开启 false:关闭 -->
+
+    <sign_verify>false</sign_verify>                                            <!-- 系统出现未知签名应用锁屏开关 true:开启 false:关闭 -->
+    <pos_verify>true</pos_verify>                                              <!-- POS收到攻击锁屏开关 true:开启 false:关闭 -->
+    <launch_sensor_check>false</launch_sensor_check>                            <!-- 开机sensor检测激活 true:开启 false:关闭 -->
+    <launch_check_customer>false</launch_check_customer>                        <!-- 开机客户端检测 true:开启 false:关闭 -->
+
+    <version>2.4.10</version>
+</root>
