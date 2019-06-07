@@ -2,14 +2,11 @@
 #define SMARTTOOLS_SMART_JNI_CONFIG_HPP
 
 #include "../kernel.hpp"
-#include "../smart_utils/smart_utils_log.hpp"
 #include "../smart_android/smart_android_config.hpp"
 
 #include <android/asset_manager.h>
 #include <android/asset_manager_jni.h>
 
-using smart::utils::log::Log;
-using smart::utils::log::LogType;
 using smart::android::config::Config;
 
 #ifdef __cplusplus
@@ -17,67 +14,111 @@ extern "C"
 {
 #endif
 
-constexpr Jint SMART_JNI_CONFIG_TMP_BUF_SIZE = 200;
-constexpr Jchar SMART_JNI_CONFIG_SYSTEM_DEFAULT_PATH[] = "/system/etc/app/cn.basewin.security.defense.system.xml";
-constexpr Jchar SMART_JNI_CONFIG_APP_DEFAULT_PATH[] = "config";
-
-JNIEXPORT void JNICALL Java_cn_smartpeak_tools_Config_Init(JNIEnv *env, jobject self, jobject assetContext)
+JNIEXPORT jstring JNICALL Java_cn_smartpeak_tools_Config_GetRemoteActivationAddress(JNIEnv *env, jobject self)
 {
-    Jint ret = 0;
-    Jchar tmpBuf[SMART_JNI_CONFIG_TMP_BUF_SIZE];
+    if (env == nullptr)
+        return nullptr;
 
-    FILE *systemConfigFile = nullptr;
-    AAssetManager *aAssetManager = nullptr;
-    AAsset *aAsset = nullptr;
+    return (*env).NewStringUTF(Config::Instance().GetRemoteActivationAddress());
+}
 
-    if ((env == nullptr) || (assetContext == nullptr))
-        return;
+JNIEXPORT jint JNICALL Java_cn_smartpeak_tools_Config_GetRemoteActivationPort(JNIEnv *env, jobject self)
+{
+    if (env == nullptr)
+        return 0;
 
-    Config::Instance().Reset();
+    return Config::Instance().GetRemoteActivationPort();
+}
 
-    do
-    {
-        if (systemConfigFile = fopen(SMART_JNI_CONFIG_SYSTEM_DEFAULT_PATH, "rb");systemConfigFile == nullptr)
-            break;
+JNIEXPORT jint JNICALL Java_cn_smartpeak_tools_Config_GetRemoteActivationTimeouts(JNIEnv *env, jobject self)
+{
+    if (env == nullptr)
+        return 0;
 
-        while (true)
-        {
-            ret = fread(tmpBuf, 1, sizeof(tmpBuf), systemConfigFile);
-            Config::Instance().WriteBuffer(tmpBuf, ret);
-            if (ret < sizeof(tmpBuf))
-                break;
-        }
-    } while (false);
+    return Config::Instance().GetRemoteActivationTimeouts();
+}
 
-    do
-    {
-        if (systemConfigFile != nullptr)
-            break;
-        if (aAssetManager = AAssetManager_fromJava(env, assetContext);aAssetManager == nullptr)
-            break;
+JNIEXPORT jstring JNICALL Java_cn_smartpeak_tools_Config_GetCustomerCheckAddress(JNIEnv *env, jobject self)
+{
+    if (env == nullptr)
+        return nullptr;
 
-        if (aAsset = AAssetManager_open(
-                    aAssetManager,
-                    SMART_JNI_CONFIG_APP_DEFAULT_PATH,
-                    AASSET_MODE_UNKNOWN
-            );aAsset == nullptr)
-            break;
+    return env->NewStringUTF(Config::Instance().GetCustomerCheckAddress());
+}
 
-        Config::Instance().WriteBuffer(
-                reinterpret_cast<Jchar *>(const_cast<void *>(AAsset_getBuffer(aAsset))),
-                AAsset_getLength(aAsset)
-        );
-    } while (false);
+JNIEXPORT jint JNICALL Java_cn_smartpeak_tools_Config_GetCustomerCheckPort(JNIEnv *env, jobject self)
+{
+    if (env == nullptr)
+        return 0;
 
-    if (systemConfigFile != nullptr)
-        fclose(systemConfigFile);
-    if (aAsset != nullptr)
-        AAsset_close(aAsset);
+    return Config::Instance().GetCustomerCheckPort();
+}
 
-    if (Config::Instance().Process())
-        Log::Instance().Print<LogType::INFO>("configure is ready");
-    else
-        Log::Instance().Print<LogType::INFO>("configure not is ready");
+JNIEXPORT jint JNICALL Java_cn_smartpeak_tools_Config_GetCustomerCheckTimeouts(JNIEnv *env, jobject self)
+{
+    if (env == nullptr)
+        return 0;
+
+    return Config::Instance().GetCustomerCheckTimeouts();
+}
+
+JNIEXPORT jint JNICALL Java_cn_smartpeak_tools_Config_GetModel(JNIEnv *env, jobject self)
+{
+    if (env == nullptr)
+        return 0;
+
+    return Config::Instance().GetModel();
+}
+
+JNIEXPORT jboolean JNICALL Java_cn_smartpeak_tools_Config_GetWhetherToOpenAudio(JNIEnv *env, jobject self)
+{
+    if (env == nullptr)
+        return false;
+
+    return Config::Instance().GetWhetherToOpenAudio();
+}
+
+JNIEXPORT jboolean JNICALL Java_cn_smartpeak_tools_Config_GetWhetherToOpenSignVerify(JNIEnv *env, jobject self)
+{
+    if (env == nullptr)
+        return false;
+
+    return Config::Instance().GetWhetherToOpenSignVerify();
+}
+
+JNIEXPORT jboolean JNICALL Java_cn_smartpeak_tools_Config_GetWhetherToOpenDeviceTampered(JNIEnv *env, jobject self)
+{
+    if (env == nullptr)
+        return false;
+
+    return Config::Instance().GetWhetherToOpenDeviceTampered();
+}
+
+JNIEXPORT jboolean JNICALL Java_cn_smartpeak_tools_Config_GetWhetherTheDeviceOnStartUpToBeCheckSensor(
+    JNIEnv *env,
+    jobject self
+)
+{
+    if (env == nullptr)
+        return false;
+
+    return Config::Instance().GetWhetherTheDeviceOnStartUpToBeCheckSensor();
+}
+
+JNIEXPORT jboolean JNICALL Java_cn_smartpeak_tools_Config_GetWhetherToOpenCustomerCheck(JNIEnv *env, jobject self)
+{
+    if (env == nullptr)
+        return false;
+
+    return Config::Instance().GetWhetherToOpenCustomerCheck();
+}
+
+JNIEXPORT jstring JNICALL Java_cn_smartpeak_tools_Config_GetVersion(JNIEnv *env, jobject self)
+{
+    if (env == nullptr)
+        return nullptr;
+
+    return (*env).NewStringUTF(Config::Instance().GetVersion());
 }
 
 #ifdef __cplusplus

@@ -2,12 +2,15 @@
 #define SMARTTOOLS_SMART_UTILS_LOG_HPP
 
 #include "../kernel.hpp"
+#include "../smart_utils/smart_utils_strings.hpp"
 
 #include <mutex>
-//#include <android/log.h>
+#include <android/log.h>
 
 namespace smart::utils::log
 {
+
+using smart::utils::strings::Strings;
 
 constexpr Jint LOG_CACHE_SIZE = 4096;
 constexpr Jint LOG_TAG_BUF_SIZE = 32;
@@ -16,6 +19,13 @@ enum class LogType
 {
     INFO, DEBUG, ERROR,
 };
+
+typedef struct
+{
+    Jchar cache[LOG_CACHE_SIZE / 2];
+
+    std::mutex localMutex;
+} LogHex;
 
 typedef struct
 {
@@ -51,6 +61,19 @@ public:
         memcpy(this->mLogAttr.target, v, strlen(v));
     }
 
+    void PrintHex(const Jbyte *v, Jint vLen)
+    {
+        if ((v == nullptr) || (vLen < 1))
+            return;
+
+        this->mLogHex.localMutex.lock();
+        if (!Strings::Bytes2String(v, vLen, this->mLogHex.cache, sizeof(this->mLogHex.cache)))
+            return;
+
+        this->Print<LogType::DEBUG>(this->mLogHex.cache);
+        this->mLogHex.localMutex.unlock();
+    }
+
     template<LogType _type, typename...Args>
     void Print(const Jchar *v, Args...args)
     {
@@ -79,9 +102,12 @@ public:
     }
 
 private:
+    LogHex mLogHex;
     LogAttr mLogAttr;
 
-    Log() : mLogAttr{}
+    Log() :
+        mLogHex{},
+        mLogAttr{}
     {
         memset(this->mLogAttr.target, 0, sizeof(this->mLogAttr.target));
         memcpy(this->mLogAttr.target, LOG_DEFAULT_TARGET, strlen(LOG_DEFAULT_TARGET));
@@ -89,89 +115,53 @@ private:
 
     void PrintInfo()
     {
-        printf(
-                LOG_INFO_TAMPLATE,
-                this->mLogAttr.target,
-                this->mLogAttr.nowTime->tm_year,
-                this->mLogAttr.nowTime->tm_mon,
-                this->mLogAttr.nowTime->tm_mday,
-                this->mLogAttr.nowTime->tm_hour,
-                this->mLogAttr.nowTime->tm_min,
-                this->mLogAttr.nowTime->tm_sec,
-                this->mLogAttr.cache
+        __android_log_print(
+            ANDROID_LOG_INFO,
+            this->mLogAttr.target,
+            LOG_INFO_TAMPLATE,
+            this->mLogAttr.target,
+            this->mLogAttr.nowTime->tm_year,
+            this->mLogAttr.nowTime->tm_mon,
+            this->mLogAttr.nowTime->tm_mday,
+            this->mLogAttr.nowTime->tm_hour,
+            this->mLogAttr.nowTime->tm_min,
+            this->mLogAttr.nowTime->tm_sec,
+            this->mLogAttr.cache
         );
-        fflush(stdout);
-//        __android_log_print(
-//                ANDROID_LOG_INFO,
-//                this->mLogAttr.target,
-//                LOG_INFO_TAMPLATE,
-//                this->mLogAttr.target,
-//                this->mLogAttr.nowTime->tm_year,
-//                this->mLogAttr.nowTime->tm_mon,
-//                this->mLogAttr.nowTime->tm_mday,
-//                this->mLogAttr.nowTime->tm_hour,
-//                this->mLogAttr.nowTime->tm_min,
-//                this->mLogAttr.nowTime->tm_sec,
-//                this->mLogAttr.cache
-//        );
     }
 
     void PrintDebug()
     {
-        printf(
-                LOG_DEBG_TAMPLATE,
-                this->mLogAttr.target,
-                this->mLogAttr.nowTime->tm_year,
-                this->mLogAttr.nowTime->tm_mon,
-                this->mLogAttr.nowTime->tm_mday,
-                this->mLogAttr.nowTime->tm_hour,
-                this->mLogAttr.nowTime->tm_min,
-                this->mLogAttr.nowTime->tm_sec,
-                this->mLogAttr.cache
+        __android_log_print(
+            ANDROID_LOG_DEBUG,
+            this->mLogAttr.target,
+            LOG_DEBG_TAMPLATE,
+            this->mLogAttr.target,
+            this->mLogAttr.nowTime->tm_year,
+            this->mLogAttr.nowTime->tm_mon,
+            this->mLogAttr.nowTime->tm_mday,
+            this->mLogAttr.nowTime->tm_hour,
+            this->mLogAttr.nowTime->tm_min,
+            this->mLogAttr.nowTime->tm_sec,
+            this->mLogAttr.cache
         );
-        fflush(stdout);
-//        __android_log_print(
-//                ANDROID_LOG_DEBUG,
-//                this->mLogAttr.target,
-//                LOG_DEBG_TAMPLATE,
-//                this->mLogAttr.target,
-//                this->mLogAttr.nowTime->tm_year,
-//                this->mLogAttr.nowTime->tm_mon,
-//                this->mLogAttr.nowTime->tm_mday,
-//                this->mLogAttr.nowTime->tm_hour,
-//                this->mLogAttr.nowTime->tm_min,
-//                this->mLogAttr.nowTime->tm_sec,
-//                this->mLogAttr.cache
-//        );
     }
 
     void PrintError()
     {
-        printf(
-                LOG_EROR_TAMPLATE,
-                this->mLogAttr.target,
-                this->mLogAttr.nowTime->tm_year,
-                this->mLogAttr.nowTime->tm_mon,
-                this->mLogAttr.nowTime->tm_mday,
-                this->mLogAttr.nowTime->tm_hour,
-                this->mLogAttr.nowTime->tm_min,
-                this->mLogAttr.nowTime->tm_sec,
-                this->mLogAttr.cache
+        __android_log_print(
+            ANDROID_LOG_ERROR,
+            this->mLogAttr.target,
+            LOG_EROR_TAMPLATE,
+            this->mLogAttr.target,
+            this->mLogAttr.nowTime->tm_year,
+            this->mLogAttr.nowTime->tm_mon,
+            this->mLogAttr.nowTime->tm_mday,
+            this->mLogAttr.nowTime->tm_hour,
+            this->mLogAttr.nowTime->tm_min,
+            this->mLogAttr.nowTime->tm_sec,
+            this->mLogAttr.cache
         );
-        fflush(stdout);
-//        __android_log_print(
-//                ANDROID_LOG_ERROR,
-//                this->mLogAttr.target,
-//                LOG_EROR_TAMPLATE,
-//                this->mLogAttr.target,
-//                this->mLogAttr.nowTime->tm_year,
-//                this->mLogAttr.nowTime->tm_mon,
-//                this->mLogAttr.nowTime->tm_mday,
-//                this->mLogAttr.nowTime->tm_hour,
-//                this->mLogAttr.nowTime->tm_min,
-//                this->mLogAttr.nowTime->tm_sec,
-//                this->mLogAttr.cache
-//        );
     }
 };
 

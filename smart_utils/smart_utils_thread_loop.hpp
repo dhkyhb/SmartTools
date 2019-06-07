@@ -5,6 +5,7 @@
 
 #include <thread>
 #include <mutex>
+#include <condition_variable>
 
 namespace smart::utils::thread::loop
 {
@@ -43,6 +44,8 @@ typedef struct
     ThreadLoopTaskThing thing;
 } ThreadLoopParameter;
 
+constexpr Jint THREAD_LOOP_IF_NOT_SET_MAX_BUF_USE_THIS_MAX_BUF_SIZE = 50;
+
 class ThreadLoop
 {
 public:
@@ -67,6 +70,12 @@ public:
     template<typename T>
     ThreadLoop &Insert(void *p, ItType<T> taskThing)
     {
+        if (this->mThreadLoopTasks.tasks == nullptr)
+        {
+            this->mThreadLoopTasks.count = THREAD_LOOP_IF_NOT_SET_MAX_BUF_USE_THIS_MAX_BUF_SIZE;
+            this->mThreadLoopTasks.tasks = new ThreadLoopTask[this->mThreadLoopTasks.count];
+        }
+
         this->mThreadLoopTasks.taskInsertLock.lock();
         this->mThreadLoopParameter.isNew = true;
 
@@ -112,7 +121,9 @@ private:
     ThreadLoopTasks mThreadLoopTasks;
     ThreadLoopParameter mThreadLoopParameter;
 
-    ThreadLoop() : mThreadLoopTasks{}, mThreadLoopParameter{}
+    ThreadLoop() :
+        mThreadLoopTasks{},
+        mThreadLoopParameter{}
     {}
 
     void AddTask()
@@ -133,20 +144,20 @@ private:
         this->mThreadLoopTasks.tasks[i].isUing = true;
 
         this->mThreadLoopTasks.tasks[i].taskThread = std::thread(
-                [](ThreadLoopTask *p) {
-                    auto &task = *p;
+            [](ThreadLoopTask *p) {
+                auto &task = *p;
 
-                    while (true)
-                    {
-                        std::unique_lock<std::mutex> uniqueLock(task.taskLock);
-                        if (!task.isUing)
-                            task.taskCondition.wait(uniqueLock);
+                while (true)
+                {
+                    std::unique_lock<std::mutex> uniqueLock(task.taskLock);
+                    if (!task.isUing)
+                        task.taskCondition.wait(uniqueLock);
 
-                        task.taskThing(task.taskID, task.taskPamrameter);
-                        task.isUing = false;
-                    }
-                },
-                &this->mThreadLoopTasks.tasks[i]
+                    task.taskThing(task.taskID, task.taskPamrameter);
+                    task.isUing = false;
+                }
+            },
+            &this->mThreadLoopTasks.tasks[i]
         );
     }
 };

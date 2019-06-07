@@ -51,8 +51,8 @@ typedef struct BoostXMLSupport
     std::stringstream localXML;
 
     BoostXMLSupport() :
-            root{},
-            localXML{}
+        root{},
+        localXML{}
     {}
 } BoostXMLSupport;
 
@@ -103,7 +103,7 @@ public:
 
     Config &WriteBuffer(const Jchar *v, Jint set)
     {
-        if ((v == nullptr) || (this->mConfigAttr.cacheSet > sizeof(this->mConfigAttr.cache)))
+        if ((v == nullptr) || (this->mConfigAttr.cacheSet > static_cast<Jint>(sizeof(this->mConfigAttr.cache))))
             return (*this);
 
         memcpy(&this->mConfigAttr.cache[this->mConfigAttr.cacheSet], v, set);
@@ -114,7 +114,7 @@ public:
     Config &Test()
     {
         Log::Instance().Print<LogType::INFO>(
-                "-------------------------------- Config --------------------------------"
+            "-------------------------------- Config --------------------------------"
         );
 
         Log::Instance().Print<LogType::INFO>("%s: %s", "VerifyAddress", this->mConfigFileElement.verifyAddress);
@@ -122,75 +122,75 @@ public:
         Log::Instance().Print<LogType::INFO>("%s: %d", "VerifyTimeouts", this->mConfigFileElement.verifyTimeouts);
 
         Log::Instance().Print<LogType::INFO>(
-                "%s: %s",
-                "CheckCustomerAddress",
-                this->mConfigFileElement.checkCustomerAddress
+            "%s: %s",
+            "CheckCustomerAddress",
+            this->mConfigFileElement.checkCustomerAddress
         );
         Log::Instance().Print<LogType::INFO>(
-                "%s: %d",
-                "CheckCustomerPort",
-                this->mConfigFileElement.checkCustomerPort
+            "%s: %d",
+            "CheckCustomerPort",
+            this->mConfigFileElement.checkCustomerPort
         );
         Log::Instance().Print<LogType::INFO>(
-                "%s: %d",
-                "CheckCustomerTimeouts",
-                this->mConfigFileElement.checkCustomerTimeouts
+            "%s: %d",
+            "CheckCustomerTimeouts",
+            this->mConfigFileElement.checkCustomerTimeouts
         );
 
         Log::Instance().Print<LogType::INFO>("%s: %d", "Model", this->mConfigFileElement.model);
         Log::Instance().Print<LogType::INFO>("%s: %s", "Audio", (this->mConfigFileElement.audio ? "true" : "false"));
 
         Log::Instance().Print<LogType::INFO>(
-                "%s: %s",
-                "SignVerify",
-                (this->mConfigFileElement.signVerify ? "true" : "false")
+            "%s: %s",
+            "SignVerify",
+            (this->mConfigFileElement.signVerify ? "true" : "false")
         );
         Log::Instance().Print<LogType::INFO>(
-                "%s: %s",
-                "PosVerify",
-                (this->mConfigFileElement.posVerify ? "true" : "false")
+            "%s: %s",
+            "PosVerify",
+            (this->mConfigFileElement.posVerify ? "true" : "false")
         );
         Log::Instance().Print<LogType::INFO>(
-                "%s: %s",
-                "LaunchSensorCheck",
-                (this->mConfigFileElement.launchSensorCheck ? "true" : "false")
+            "%s: %s",
+            "LaunchSensorCheck",
+            (this->mConfigFileElement.launchSensorCheck ? "true" : "false")
         );
         Log::Instance().Print<LogType::INFO>(
-                "%s: %s",
-                "LaunchCheckCustomer",
-                (this->mConfigFileElement.launchCheckCustomer ? "true" : "false")
+            "%s: %s",
+            "LaunchCheckCustomer",
+            (this->mConfigFileElement.launchCheckCustomer ? "true" : "false")
         );
 
         Log::Instance().Print<LogType::INFO>("%s: %s", "Version", this->mConfigFileElement.version);
         return (*this);
     }
 
-    const Jchar *GetVerifyAddress()
+    const Jchar *GetRemoteActivationAddress()
     {
         return (this->mConfigAttr.isReady ? this->mConfigFileElement.verifyAddress : nullptr);
     }
 
-    Jint GetVerifyPort()
+    Jint GetRemoteActivationPort()
     {
         return (this->mConfigAttr.isReady ? this->mConfigFileElement.verifyPort : 0);
     }
 
-    Jint GetVerifyTimeouts()
+    Jint GetRemoteActivationTimeouts()
     {
         return (this->mConfigAttr.isReady ? this->mConfigFileElement.verifyTimeouts : CONFIG_DEFAULT_TIMEOUTS);
     }
 
-    const Jchar *GetCheckCustomerAddress()
+    const Jchar *GetCustomerCheckAddress()
     {
         return (this->mConfigAttr.isReady ? this->mConfigFileElement.checkCustomerAddress : nullptr);
     }
 
-    Jint GetCheckCustomerPort()
+    Jint GetCustomerCheckPort()
     {
         return (this->mConfigAttr.isReady ? this->mConfigFileElement.checkCustomerPort : 0);
     }
 
-    Jint GetCheckCustomerTimeouts()
+    Jint GetCustomerCheckTimeouts()
     {
         return (this->mConfigAttr.isReady ? this->mConfigFileElement.checkCustomerTimeouts : CONFIG_DEFAULT_TIMEOUTS);
     }
@@ -200,27 +200,27 @@ public:
         return (this->mConfigAttr.isReady ? this->mConfigFileElement.model : 0);
     }
 
-    Jbool GetAudio()
+    Jbool GetWhetherToOpenAudio()
     {
         return (this->mConfigAttr.isReady ? this->mConfigFileElement.audio : false);
     }
 
-    Jbool GetSignVerify()
+    Jbool GetWhetherToOpenSignVerify()
     {
         return (this->mConfigAttr.isReady ? this->mConfigFileElement.signVerify : false);
     }
 
-    Jbool GetPosVerify()
+    Jbool GetWhetherToOpenDeviceTampered()
     {
         return (this->mConfigAttr.isReady ? this->mConfigFileElement.posVerify : false);
     }
 
-    Jbool GetLaunchSensorCheck()
+    Jbool GetWhetherTheDeviceOnStartUpToBeCheckSensor()
     {
         return (this->mConfigAttr.isReady ? this->mConfigFileElement.launchSensorCheck : false);
     }
 
-    Jbool GetLaunchCheckCustomer()
+    Jbool GetWhetherToOpenCustomerCheck()
     {
         return (this->mConfigAttr.isReady ? this->mConfigFileElement.launchCheckCustomer : false);
     }
@@ -236,9 +236,9 @@ private:
     BoostXMLSupport mBoostXMLSupport;
 
     Config() :
-            mConfigAttr{},
-            mConfigFileElement{},
-            mBoostXMLSupport{}
+        mConfigAttr{},
+        mConfigFileElement{},
+        mBoostXMLSupport{}
     {}
 
     Jbool Check()
@@ -253,84 +253,101 @@ private:
         if (this->mBoostXMLSupport.root.get_child_optional(CONFIG_ELEMENT_ROOT).get_ptr() == nullptr)
             return false;
 
-        auto *verifyTimeouts = this->mBoostXMLSupport.root.get_optional<Jint>(
-                CONFIG_ELEMENT_POS_VERIFY_TIMEOUTS_TAG
-        ).get_ptr();
-        auto *verifyPort = this->mBoostXMLSupport.root.get_optional<Jint>(
-                CONFIG_ELEMENT_POS_VERIFY_PORT_TAG
-        ).get_ptr();
+        if ((this->mBoostXMLSupport.root.get_optional<Jint>(
+            CONFIG_ELEMENT_POS_VERIFY_TIMEOUTS_TAG
+        ).get_ptr() == nullptr)
+            || (this->mBoostXMLSupport.root.get_optional<Jint>(
+            CONFIG_ELEMENT_POS_VERIFY_PORT_TAG
+        ).get_ptr() == nullptr)
+            || (this->mBoostXMLSupport.root.get_optional<std::string>(
+            CONFIG_ELEMENT_POS_VERIFY_ADDRESS_TAG
+        ).get_ptr() == nullptr))
+            return false;
+
+        auto &&verifyTimeouts = this->mBoostXMLSupport.root.get<Jint>(
+            CONFIG_ELEMENT_POS_VERIFY_TIMEOUTS_TAG
+        );
+        auto &&verifyPort = this->mBoostXMLSupport.root.get<Jint>(
+            CONFIG_ELEMENT_POS_VERIFY_PORT_TAG
+        );
         auto &&verifyAddress = this->mBoostXMLSupport.root.get<std::string>(
-                CONFIG_ELEMENT_POS_VERIFY_ADDRESS_TAG
+            CONFIG_ELEMENT_POS_VERIFY_ADDRESS_TAG
         );
 
-        if ((verifyTimeouts == nullptr)
-            || (verifyPort == nullptr)
+        if ((this->mBoostXMLSupport.root.get_optional<Jint>(
+            CONFIG_ELEMENT_POS_CHECK_CUSTOMER_TIMEOUTS_TAG
+        ).get_ptr() == nullptr)
+            || (this->mBoostXMLSupport.root.get_optional<Jint>(
+            CONFIG_ELEMENT_POS_CHECK_CUSTOMER_PORT_TAG
+        ).get_ptr() == nullptr)
             || (this->mBoostXMLSupport.root.get_optional<std::string>(
-                CONFIG_ELEMENT_POS_VERIFY_ADDRESS_TAG
+            CONFIG_ELEMENT_POS_CHECK_CUSTOMER_ADDRESS_TAG
         ).get_ptr() == nullptr))
             return false;
 
-        auto *customerTimeout = this->mBoostXMLSupport.root.get_optional<Jint>(
-                CONFIG_ELEMENT_POS_CHECK_CUSTOMER_TIMEOUTS_TAG
-        ).get_ptr();
-        auto *customerPort = this->mBoostXMLSupport.root.get_optional<Jint>(
-                CONFIG_ELEMENT_POS_CHECK_CUSTOMER_PORT_TAG
-        ).get_ptr();
+        auto &&customerTimeout = this->mBoostXMLSupport.root.get<Jint>(
+            CONFIG_ELEMENT_POS_CHECK_CUSTOMER_TIMEOUTS_TAG
+        );
+        auto &&customerPort = this->mBoostXMLSupport.root.get<Jint>(
+            CONFIG_ELEMENT_POS_CHECK_CUSTOMER_PORT_TAG
+        );
         auto &&customerAddress = this->mBoostXMLSupport.root.get<std::string>(
-                CONFIG_ELEMENT_POS_CHECK_CUSTOMER_ADDRESS_TAG
+            CONFIG_ELEMENT_POS_CHECK_CUSTOMER_ADDRESS_TAG
         );
 
-        if ((customerTimeout == nullptr)
-            || (customerPort == nullptr)
-            || (this->mBoostXMLSupport.root.get_optional<std::string>(
-                CONFIG_ELEMENT_POS_CHECK_CUSTOMER_ADDRESS_TAG
+        if ((this->mBoostXMLSupport.root.get_optional<Jint>(CONFIG_ELEMENT_MODEL_TAG).get_ptr() == nullptr)
+            || (this->mBoostXMLSupport.root.get_optional<Jbool>(CONFIG_ELEMENT_AUDIO_TAG).get_ptr() == nullptr)
+            || (this->mBoostXMLSupport.root.get_optional<Jbool>(CONFIG_ELEMENT_SIGN_VERIFY).get_ptr() == nullptr)
+            || (this->mBoostXMLSupport.root.get_optional<Jbool>(CONFIG_ELEMENT_POS_VERIFY).get_ptr() == nullptr))
+            return false;
+
+        auto &&model = this->mBoostXMLSupport.root.get<Jint>(CONFIG_ELEMENT_MODEL_TAG);
+        auto &&audio = this->mBoostXMLSupport.root.get<Jbool>(CONFIG_ELEMENT_AUDIO_TAG);
+        auto &&signVerify = this->mBoostXMLSupport.root.get<Jbool>(CONFIG_ELEMENT_SIGN_VERIFY);
+        auto &&posVerify = this->mBoostXMLSupport.root.get<Jbool>(CONFIG_ELEMENT_POS_VERIFY);
+
+        if ((this->mBoostXMLSupport.root.get_optional<Jbool>(
+            CONFIG_ELEMENT_LAUNCH_SENSOR_CHECK_TAG
+        ).get_ptr() == nullptr)
+            || (this->mBoostXMLSupport.root.get_optional<Jbool>(
+            CONFIG_ELEMENT_LAUNCH_CHECK_CUSTOMER_TAG
         ).get_ptr() == nullptr))
             return false;
 
-        auto *model = this->mBoostXMLSupport.root.get_optional<Jint>(CONFIG_ELEMENT_MODEL_TAG).get_ptr();
-        auto *audio = this->mBoostXMLSupport.root.get_optional<Jbool>(CONFIG_ELEMENT_AUDIO_TAG).get_ptr();
-        auto *signVerify = this->mBoostXMLSupport.root.get_optional<Jbool>(CONFIG_ELEMENT_SIGN_VERIFY).get_ptr();
-        auto *posVerify = this->mBoostXMLSupport.root.get_optional<Jbool>(CONFIG_ELEMENT_POS_VERIFY).get_ptr();
+        auto &&launchSensorCheck = this->mBoostXMLSupport.root.get<Jbool>(
+            CONFIG_ELEMENT_LAUNCH_SENSOR_CHECK_TAG
+        );
+        auto &&launchCheckCustomer = this->mBoostXMLSupport.root.get<Jbool>(
+            CONFIG_ELEMENT_LAUNCH_CHECK_CUSTOMER_TAG
+        );
 
-        if ((model == nullptr) || (audio == nullptr) || (signVerify == nullptr) || (posVerify == nullptr))
-            return false;
-
-        auto *launchSensorCheck = this->mBoostXMLSupport.root.get_optional<Jbool>(
-                CONFIG_ELEMENT_LAUNCH_SENSOR_CHECK_TAG
-        ).get_ptr();
-        auto *launchCheckCustomer = this->mBoostXMLSupport.root.get_optional<Jbool>(
-                CONFIG_ELEMENT_LAUNCH_CHECK_CUSTOMER_TAG
-        ).get_ptr();
-
-        if ((launchSensorCheck == nullptr) || (launchCheckCustomer == nullptr))
-            return false;
-
-        auto &&version = this->mBoostXMLSupport.root.get<std::string>(CONFIG_ELEMENT_VERSION_TAG);
         if (this->mBoostXMLSupport.root.get_optional<std::string>(CONFIG_ELEMENT_VERSION_TAG).get_ptr() == nullptr)
             return false;
 
-        this->mConfigFileElement.verifyTimeouts = *verifyTimeouts;
-        this->mConfigFileElement.verifyPort = *verifyPort;
-        memcpy(
-                this->mConfigFileElement.verifyAddress,
-                verifyAddress.c_str(),
-                verifyAddress.size());
+        auto &&version = this->mBoostXMLSupport.root.get<std::string>(CONFIG_ELEMENT_VERSION_TAG);
 
-        this->mConfigFileElement.checkCustomerTimeouts = *customerTimeout;
-        this->mConfigFileElement.checkCustomerPort = *customerPort;
+        this->mConfigFileElement.verifyTimeouts = verifyTimeouts;
+        this->mConfigFileElement.verifyPort = verifyPort;
         memcpy(
-                this->mConfigFileElement.checkCustomerAddress,
-                customerAddress.c_str(),
-                customerAddress.size()
+            this->mConfigFileElement.verifyAddress,
+            verifyAddress.c_str(),
+            verifyAddress.size());
+
+        this->mConfigFileElement.checkCustomerTimeouts = customerTimeout;
+        this->mConfigFileElement.checkCustomerPort = customerPort;
+        memcpy(
+            this->mConfigFileElement.checkCustomerAddress,
+            customerAddress.c_str(),
+            customerAddress.size()
         );
 
-        this->mConfigFileElement.model = *model;
-        this->mConfigFileElement.audio = *audio;
-        this->mConfigFileElement.signVerify = *signVerify;
-        this->mConfigFileElement.posVerify = *posVerify;
+        this->mConfigFileElement.model = model;
+        this->mConfigFileElement.audio = audio;
+        this->mConfigFileElement.signVerify = signVerify;
+        this->mConfigFileElement.posVerify = posVerify;
 
-        this->mConfigFileElement.launchSensorCheck = *launchSensorCheck;
-        this->mConfigFileElement.launchCheckCustomer = *launchCheckCustomer;
+        this->mConfigFileElement.launchSensorCheck = launchSensorCheck;
+        this->mConfigFileElement.launchCheckCustomer = launchCheckCustomer;
 
         memcpy(this->mConfigFileElement.version, version.c_str(), version.size());
         return true;

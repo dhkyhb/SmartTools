@@ -37,19 +37,6 @@ static JniAttr *JniAttrList = nullptr;
 constexpr Jchar JNI_THREAD_LOOP_CALLBACK_METHOD_NAME[] = "OnProcess";
 constexpr Jchar JNI_THREAD_LOOP_CALLBACK_METHOD_PARAMETER[] = "(I)V";
 
-JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_ThreadLoop_Init(JNIEnv *env, jobject self, jint loopSize)
-{
-    if ((env == nullptr) || (loopSize < 1))
-        return self;
-    if (JniAttrList == nullptr)
-        JniAttrList = new JniAttr();
-    if ((*JniAttrList).javaVm == nullptr)
-        (*env).GetJavaVM(&(*JniAttrList).javaVm);
-
-    ThreadLoop::Instance().Init(loopSize);
-    return self;
-}
-
 JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_ThreadLoop_Insert(JNIEnv *env, jobject self, jobject method)
 {
     if ((JniAttrList == nullptr) || ((*JniAttrList).javaVm == nullptr))
@@ -80,9 +67,11 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_ThreadLoop_Insert(JNIEnv *env,
                 );processId == nullptr)
                 break;
 
-            (*env).CallVoidMethod(callback, processId, id);
+            (*env).CallVoidMethod(jni.jniObject, processId, id);
         } while (false);
 
+        if(callback != nullptr)
+            (*env).DeleteLocalRef(callback);
         if (jni.jniObject != nullptr)
             (*env).DeleteGlobalRef(jni.jniObject);
         jni.javaVm->DetachCurrentThread();

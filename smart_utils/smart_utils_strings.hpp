@@ -22,7 +22,7 @@ public:
         if (aLen != bLen)
             return false;
 
-        for (i = 0; i < aLen; ++i)
+        for (i = 0; i < static_cast<Jint>(aLen); ++i)
         {
             if (a[i] == b[i])
             {
@@ -32,6 +32,66 @@ public:
         }
 
         return state;
+    }
+
+    static Jbool Bytes2String(const Jbyte *v, Jint vLen, Jchar *ret, Jint retLen)
+    {
+        constexpr Jint BYTES2STRING_TEMP_BUF_SIZE = 4;
+
+        Jint i = 0;
+        Jint buffLen = 0;
+        Jchar buff[BYTES2STRING_TEMP_BUF_SIZE];
+
+        if ((v == nullptr) || (vLen < 1) || (ret == nullptr) || (retLen < 1))
+            return false;
+        if ((vLen * 2) >= retLen)
+            return false;
+
+        memset(ret, 0, retLen);
+        for (i = 0; i < vLen; ++i)
+        {
+            buffLen = snprintf(buff, sizeof(buff), "%02X", v[i]);
+            memcpy(&ret[i * 2], buff, buffLen);
+        }
+
+        return true;
+    }
+
+    static Jint String2Bytes(const Jchar *v, Jbyte *ret, Jint retLen)
+    {
+        Jint i = 0;
+        Jint step = 0;
+        Jint vLen = 0;
+
+        Jchar tmp = 0;
+        Jbyte uTmp = 0;
+
+        if ((v == nullptr) || (ret == nullptr) || (retLen < 1))
+            return step;
+        if (vLen = strlen(v);(vLen / 2) > retLen)
+            return step;
+
+        memset(ret, 0, retLen);
+        for (i = 0; i < vLen; ++i)
+        {
+            if (((i % 2) == 0) && (i != 0))
+                ++step;
+
+            tmp = v[i];
+            if ((tmp > 0x40) && (tmp < 0x47))
+                uTmp = static_cast<Jbyte>(tmp - 0x41 + 0x0A);
+            else if ((tmp > 0x60) && (tmp < 0x67))
+                uTmp = static_cast<Jbyte>(tmp - 0x61 + 0x0A);
+            else
+                uTmp = static_cast<Jbyte>(tmp - '0x30');
+
+            if ((i % 2) == 1)
+                ret[step] |= uTmp;
+            else
+                ret[step] |= uTmp << 4u;
+        }
+
+        return (++step);
     }
 
 private:

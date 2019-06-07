@@ -2,24 +2,52 @@
 #define SMARTTOOLS_SMART_ANDROID_REMOTE_ACTIVE_0_HPP
 
 #include "../kernel.hpp"
+#include "../smart_utils/smart_utils_log.hpp"
+#include "../smart_utils/smart_utils_math.hpp"
+#include "../smart_android/smart_android_config.hpp"
 
 #include <APosSecurityManager.h>
+
+#include <fcntl.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <linux/in.h>
+#include <sys/socket.h>
 
 namespace smart::android::remote::active0
 {
 
+using smart::utils::log::Log;
+using smart::utils::log::LogType;
+using smart::utils::math::Math;
+using smart::android::config::Config;
+
 constexpr Jint REMOTEACTIVE0_DAM_DATA_AREA_SN_SIZE = 32;
-constexpr Jint REMOTEACTIVE0_DAM_DATA_AREA_CACHE_SIZE = 1024;
+constexpr Jint REMOTEACTIVE0_DAM_DATA_AREA_CODE_SIZE = 1024;
+constexpr Jint REMOTEACTIVE0_DAM_PACKAGES_SIZE = 4096;
+
+enum class RemoteActive0Type
+{
+    ARQ = 1,
+    ARP = 129,
+    ARR = 2,
+    ARK = 130,
+};
 
 typedef struct
 {
-    Jint cacheLen;
-    Jbyte cache[REMOTEACTIVE0_DAM_DATA_AREA_CACHE_SIZE];
-    Jchar sn[REMOTEACTIVE0_DAM_DATA_AREA_SN_SIZE];
+    Jint codeLen;
+    Jbyte code[REMOTEACTIVE0_DAM_DATA_AREA_CODE_SIZE];
+    Jint snLen;
+    Jbyte sn[REMOTEACTIVE0_DAM_DATA_AREA_SN_SIZE];
+
+    Jbyte result;
 } RemoteActive0DAMDataArea;
 
 typedef struct
 {
+    Jbyte packages[REMOTEACTIVE0_DAM_PACKAGES_SIZE];
+
     Jbyte stx;
     Jbyte lenH;
     Jbyte lenL;
@@ -31,6 +59,15 @@ typedef struct
 
 typedef struct
 {
+    Jint socket;
+
+    sockaddr_in sockaddrIn;
+    timeval readCountTimes;
+    timeval writeCountTimes;
+} RemoteActive0Client;
+
+typedef struct
+{
     Jint activeCodeLen;
     Jchar *activeCode;
     APosSecurityManager *context;
@@ -38,7 +75,8 @@ typedef struct
     std::mutex posMutex;
 } POSSDKSupport;
 
-constexpr Jint REMOTEACTIVE0_APPLY_ACTIVE_CODE_BY_SP_OF_MODE = 3;
+constexpr Jint REMOTEACTIVE0_APPLY_ACTIVE_CODE_BY_SP_OF_MODE = 0;
+constexpr Jbyte REMOTEACTIVE0_PKG_TYPE = 0xA5;
 
 // Old version, it's based on Socket to unlock request.
 class RemoteActive0
@@ -62,10 +100,16 @@ public:
                 break;
             if (!this->GetActiveCodeBySP())
                 break;
+            if (!this->SocketInit())
+                break;
+            if (!this->ExecuteUnlockMessage())
+                break;
 
             state = true;
+            Log::Instance().Print<LogType::INFO>("remote activation is activation sussesful");
         } while (false);
 
+        this->SocketRelease();
         this->PosRelease();
         return state;
     }
@@ -80,10 +124,11 @@ public:
         {
             if (sn == nullptr)
                 break;
-            if (snLen = strlen(sn);snLen > sizeof(this->mRemoteActive0DAM.damDataArea.sn))
+            if (snLen = strlen(sn);snLen > static_cast<Jint>(sizeof(this->mRemoteActive0DAM.damDataArea.sn) - 1))
                 break;
 
-            memcpy(this->mRemoteActive0DAM.damDataArea.sn, sn, snLen);
+            this->mRemoteActive0DAM.damDataArea.snLen = snLen;
+            memcpy(this->mRemoteActive0DAM.damDataArea.sn, sn, this->mRemoteActive0DAM.damDataArea.snLen);
         } while (false);
 
         return (*this);
@@ -92,10 +137,12 @@ public:
 private:
     POSSDKSupport mPOSSDKSupport;
     RemoteActive0DAM mRemoteActive0DAM;
+    RemoteActive0Client mRemoteActive0Client;
 
     RemoteActive0() :
         mPOSSDKSupport{},
-        mRemoteActive0DAM{}
+        mRemoteActive0DAM{},
+        mRemoteActive0Client{}
     {}
 
     Jbool POSInit()
@@ -116,6 +163,116 @@ private:
         this->mPOSSDKSupport.posMutex.unlock();
     }
 
+    Jbool SocketInit()
+    {
+        Jint i = 0;
+
+        auto &&hostT = gethostbyname(Config::Instance().GetRemoteActivationAddress());
+        if (hostT == nullptr)
+            return false;
+
+        while ((*hostT).h_addr_list[i] != nullptr)
+        {
+            Log::Instance().Print<LogType::DEBUG>(
+                "remote activation address parse: %s",
+                inet_ntoa(*reinterpret_cast<in_addr *>((*hostT).h_addr_list[i]))
+            );
+            ++i;
+        }
+
+        if (i < 1)
+            return false;
+
+        this->mRemoteActive0Client.socket = socket(AF_INET, SOCK_STREAM, 0);
+        this->mRemoteActive0Client.sockaddrIn.sin_family = AF_INET;
+        this->mRemoteActive0Client.sockaddrIn.sin_port = htons(Config::Instance().GetRemoteActivationPort());
+        this->mRemoteActive0Client.sockaddrIn.sin_addr = *reinterpret_cast<in_addr *>((*hostT).h_addr_list[0]);
+
+        if (connect(
+            this->mRemoteActive0Client.socket,
+            reinterpret_cast<sockaddr *>(&this->mRemoteActive0Client.sockaddrIn),
+            sizeof(this->mRemoteActive0Client.sockaddrIn)
+        ) == -1)
+            return false;
+
+        this->mRemoteActive0Client.readCountTimes.tv_sec = Config::Instance().GetRemoteActivationTimeouts();
+        this->mRemoteActive0Client.writeCountTimes.tv_sec = Config::Instance().GetRemoteActivationTimeouts();
+
+        if (setsockopt(
+            this->mRemoteActive0Client.socket,
+            SOL_SOCKET,
+            SO_SNDTIMEO,
+            reinterpret_cast<Jchar *>(&this->mRemoteActive0Client.writeCountTimes),
+            sizeof(this->mRemoteActive0Client.writeCountTimes)
+        ) != 0)
+            return false;
+
+        if (setsockopt(
+            this->mRemoteActive0Client.socket,
+            SOL_SOCKET,
+            SO_RCVTIMEO,
+            reinterpret_cast<Jchar *>(&this->mRemoteActive0Client.readCountTimes),
+            sizeof(this->mRemoteActive0Client.readCountTimes)
+        ) != 0)
+            return false;
+
+        auto &&flag = fcntl(this->mRemoteActive0Client.socket, F_GETFL, 0);
+        fcntl(this->mRemoteActive0Client.socket, F_SETFL, (flag & ~O_NONBLOCK));
+        Log::Instance().Print<LogType::INFO>("remote activation socket initialization successful");
+        return true;
+    }
+
+    void SocketRelease()
+    {
+        shutdown(this->mRemoteActive0Client.socket, SHUT_RDWR);
+    }
+
+    Jbool ExecuteUnlockMessage()
+    {
+        Jint ret = 0;
+
+        if (ret = this->Mashal<RemoteActive0Type::ARQ, false>();ret == 0)
+            return false;
+        if (ret = send(this->mRemoteActive0Client.socket, this->mRemoteActive0DAM.packages, ret, 0);ret < 1)
+            return false;
+
+        Log::Instance().Print<LogType::DEBUG>("send to %d", ret);
+        if (ret = recv(
+                this->mRemoteActive0Client.socket,
+                this->mRemoteActive0DAM.packages,
+                sizeof(this->mRemoteActive0DAM.packages),
+                0
+            );ret < 1)
+            return false;
+
+        Log::Instance().Print<LogType::DEBUG>("recv to %d", ret);
+        if (!this->Parse<RemoteActive0Type::ARP>())
+            return false;
+
+        if (this->SetActiveCodeBySP())
+        {
+            if (ret = this->Mashal<RemoteActive0Type::ARR, true>();ret == 0)
+                return false;
+        } else
+        {
+            if (ret = this->Mashal<RemoteActive0Type::ARR, false>();ret == 0)
+                return false;
+        }
+
+        ret = send(this->mRemoteActive0Client.socket, this->mRemoteActive0DAM.packages, ret, 0);
+        return (ret > 0);
+    }
+
+    Jbool SetActiveCodeBySP()
+    {
+        return (APosSecurityManager_SysRemoteUnlockRsp(
+            this->mPOSSDKSupport.context,
+            REMOTEACTIVE0_APPLY_ACTIVE_CODE_BY_SP_OF_MODE,
+            reinterpret_cast<Jchar *>(this->mRemoteActive0DAM.damDataArea.code),
+            this->mRemoteActive0DAM.damDataArea.codeLen
+        ) == 0);
+    }
+
     Jbool GetActiveCodeBySP()
     {
         if (APosSecurityManager_SysRemoteUnlockReq(
@@ -123,23 +280,202 @@ private:
             REMOTEACTIVE0_APPLY_ACTIVE_CODE_BY_SP_OF_MODE,
             &this->mPOSSDKSupport.activeCode,
             &this->mPOSSDKSupport.activeCodeLen
-        ) == 0)
+        ) != 0)
             return false;
 
+        Log::Instance().Print<LogType::DEBUG>("apply activation code by the SP is successful");
         if (this->mPOSSDKSupport.activeCode == nullptr)
             return false;
-        if (this->mPOSSDKSupport.activeCodeLen > sizeof(this->mRemoteActive0DAM.damDataArea.cache))
+        if (this->mPOSSDKSupport.activeCodeLen > static_cast<Jint>(
+            sizeof(this->mRemoteActive0DAM.damDataArea.code) - 1
+        ))
             return false;
 
-        this->mRemoteActive0DAM.damDataArea.cacheLen = this->mPOSSDKSupport.activeCodeLen;
+        this->mRemoteActive0DAM.damDataArea.codeLen = (this->mPOSSDKSupport.activeCodeLen -= 3);
 
         memcpy(
-            this->mRemoteActive0DAM.damDataArea.cache,
+            this->mRemoteActive0DAM.damDataArea.code,
             &this->mPOSSDKSupport.activeCode[3],
-            this->mRemoteActive0DAM.damDataArea.cacheLen
+            this->mRemoteActive0DAM.damDataArea.codeLen
         );
 
+        Log::Instance().Print<LogType::DEBUG>("this is got active code by the SP");
+        Log::Instance().PrintHex(
+            this->mRemoteActive0DAM.damDataArea.code,
+            this->mRemoteActive0DAM.damDataArea.codeLen
+        );
         return true;
+    }
+
+    template<RemoteActive0Type _type>
+    Jbool Parse()
+    {
+        Jint step = 0;
+
+        if (this->mRemoteActive0DAM.stx = this->mRemoteActive0DAM.packages[step];
+            this->mRemoteActive0DAM.stx != REMOTEACTIVE0_PKG_TYPE)
+            return false;
+
+        this->mRemoteActive0DAM.lenH = this->mRemoteActive0DAM.packages[++step];
+        this->mRemoteActive0DAM.lenL = this->mRemoteActive0DAM.packages[++step];
+
+        if ((_type == RemoteActive0Type::ARQ) || (_type == RemoteActive0Type::ARP))
+        {
+            if (static_cast<RemoteActive0Type>(this->mRemoteActive0DAM.packages[++step]) != RemoteActive0Type::ARP)
+                return false;
+        } else if ((_type == RemoteActive0Type::ARR) || (_type == RemoteActive0Type::ARK))
+        {
+            if (static_cast<RemoteActive0Type>(this->mRemoteActive0DAM.packages[++step]) != RemoteActive0Type::ARK)
+                return false;
+        } else
+        {
+            return false;
+        }
+
+        this->mRemoteActive0DAM.damDataArea.snLen = this->mRemoteActive0DAM.packages[++step];
+        if (this->mRemoteActive0DAM.damDataArea.snLen > static_cast<Jint>(
+            sizeof(this->mRemoteActive0DAM.damDataArea.sn) - 1
+        ))
+            return false;
+
+        memcpy(
+            this->mRemoteActive0DAM.damDataArea.sn,
+            &this->mRemoteActive0DAM.packages[++step],
+            this->mRemoteActive0DAM.damDataArea.snLen
+        );
+
+        if ((_type == RemoteActive0Type::ARQ) || (_type == RemoteActive0Type::ARP))
+        {
+            auto &&aCodeSpecialLen =
+                this->mRemoteActive0DAM.packages[step += this->mRemoteActive0DAM.damDataArea.snLen];
+            this->mRemoteActive0DAM.damDataArea.codeLen = aCodeSpecialLen == 0 ? 256 : aCodeSpecialLen;
+            if (this->mRemoteActive0DAM.damDataArea.codeLen > static_cast<Jint>(
+                sizeof(this->mRemoteActive0DAM.damDataArea.code)
+            ))
+                return false;
+
+            memcpy(
+                this->mRemoteActive0DAM.damDataArea.code,
+                &this->mRemoteActive0DAM.packages[++step],
+                this->mRemoteActive0DAM.damDataArea.codeLen
+            );
+
+            step += this->mRemoteActive0DAM.damDataArea.codeLen;
+        } else if ((_type == RemoteActive0Type::ARR) || (_type == RemoteActive0Type::ARK))
+        {
+            this->mRemoteActive0DAM.damDataArea.result =
+                this->mRemoteActive0DAM.packages[step += this->mRemoteActive0DAM.damDataArea.snLen];
+            ++step;
+        }
+
+        this->mRemoteActive0DAM.crcH = this->mRemoteActive0DAM.packages[step];
+        this->mRemoteActive0DAM.crcL = this->mRemoteActive0DAM.packages[++step];
+
+        Log::Instance().Print<LogType::DEBUG>("parse sn: %s", this->mRemoteActive0DAM.damDataArea.sn);
+        if ((_type == RemoteActive0Type::ARQ) || (_type == RemoteActive0Type::ARP))
+        {
+            Log::Instance().Print<LogType::DEBUG>("parse active code");
+            Log::Instance().PrintHex(
+                this->mRemoteActive0DAM.damDataArea.code, this->mRemoteActive0DAM.damDataArea.codeLen
+            );
+        } else if ((_type == RemoteActive0Type::ARR) || (_type == RemoteActive0Type::ARK))
+        {
+            Log::Instance().Print<LogType::DEBUG>(
+                "parse active state: %02x",
+                this->mRemoteActive0DAM.damDataArea.result
+            );
+        }
+        return true;
+    }
+
+    template<RemoteActive0Type _type, Jbool isSuccessfulActivation>
+    Jint Mashal()
+    {
+        Jint step = 0;
+
+        this->mRemoteActive0DAM.stx = REMOTEACTIVE0_PKG_TYPE;
+        auto &&dataAreaLen = this->mRemoteActive0DAM.damDataArea.snLen
+                             + this->mRemoteActive0DAM.damDataArea.codeLen
+                             + 3;
+
+        this->mRemoteActive0DAM.lenH = static_cast<Jbyte>(dataAreaLen >> 8);
+        this->mRemoteActive0DAM.lenL = static_cast<Jbyte>(dataAreaLen);
+
+        this->mRemoteActive0DAM.packages[step] = this->mRemoteActive0DAM.lenH;
+        this->mRemoteActive0DAM.packages[++step] = this->mRemoteActive0DAM.lenL;
+        this->mRemoteActive0DAM.packages[++step] = static_cast<Jbyte>(_type);
+
+        this->mRemoteActive0DAM.packages[++step] = this->mRemoteActive0DAM.damDataArea.snLen;
+
+        memcpy(
+            &this->mRemoteActive0DAM.packages[++step],
+            this->mRemoteActive0DAM.damDataArea.sn,
+            this->mRemoteActive0DAM.damDataArea.snLen
+        );
+
+        if (_type == RemoteActive0Type::ARQ)
+        {
+            this->mRemoteActive0DAM.packages[step += this->mRemoteActive0DAM.damDataArea.snLen] =
+                this->mRemoteActive0DAM.damDataArea.codeLen;
+
+            memcpy(
+                &this->mRemoteActive0DAM.packages[++step],
+                this->mRemoteActive0DAM.damDataArea.code,
+                this->mRemoteActive0DAM.damDataArea.codeLen
+            );
+
+            step += this->mRemoteActive0DAM.damDataArea.codeLen;
+        } else if (_type == RemoteActive0Type::ARR)
+        {
+            this->mRemoteActive0DAM.packages[step += this->mRemoteActive0DAM.damDataArea.snLen] =
+                isSuccessfulActivation;
+
+            ++step;
+        }
+
+        auto &&crcV = Math::CRC16(this->mRemoteActive0DAM.packages, step, 0);
+        this->mRemoteActive0DAM.crcH = static_cast<Jbyte>(crcV >> 8);
+        this->mRemoteActive0DAM.crcL = static_cast<Jbyte>(crcV);
+
+        step = 0;
+        this->mRemoteActive0DAM.packages[step] = this->mRemoteActive0DAM.stx;
+        this->mRemoteActive0DAM.packages[++step] = this->mRemoteActive0DAM.lenH;
+        this->mRemoteActive0DAM.packages[++step] = this->mRemoteActive0DAM.lenL;
+        this->mRemoteActive0DAM.packages[++step] = static_cast<Jbyte>(_type);
+
+        this->mRemoteActive0DAM.packages[++step] = this->mRemoteActive0DAM.damDataArea.snLen;
+        memcpy(
+            &this->mRemoteActive0DAM.packages[++step],
+            this->mRemoteActive0DAM.damDataArea.sn,
+            this->mRemoteActive0DAM.damDataArea.snLen
+        );
+
+        if (_type == RemoteActive0Type::ARQ)
+        {
+            this->mRemoteActive0DAM.packages[step += this->mRemoteActive0DAM.damDataArea.snLen] =
+                this->mRemoteActive0DAM.damDataArea.codeLen;
+
+            memcpy(
+                &this->mRemoteActive0DAM.packages[++step],
+                this->mRemoteActive0DAM.damDataArea.code,
+                this->mRemoteActive0DAM.damDataArea.codeLen
+            );
+
+            step += this->mRemoteActive0DAM.damDataArea.codeLen;
+        } else if (_type == RemoteActive0Type::ARR)
+        {
+            this->mRemoteActive0DAM.packages[step += this->mRemoteActive0DAM.damDataArea.snLen] =
+                isSuccessfulActivation;
+
+            ++step;
+        }
+
+        this->mRemoteActive0DAM.packages[step] = this->mRemoteActive0DAM.crcH;
+        this->mRemoteActive0DAM.packages[++step] = this->mRemoteActive0DAM.crcL;
+        ++step;
+        Log::Instance().Print<LogType::DEBUG>("active marshal packages");
+        Log::Instance().PrintHex(this->mRemoteActive0DAM.packages, step);
+        return step;
     }
 };
 
