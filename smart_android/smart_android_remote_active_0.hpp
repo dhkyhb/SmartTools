@@ -202,7 +202,7 @@ private:
             this->mRemoteActive0Client.socket,
             SOL_SOCKET,
             SO_SNDTIMEO,
-            reinterpret_cast<Jchar *>(&this->mRemoteActive0Client.writeCountTimes),
+            &this->mRemoteActive0Client.writeCountTimes,
             sizeof(this->mRemoteActive0Client.writeCountTimes)
         ) != 0)
             return false;
@@ -211,7 +211,7 @@ private:
             this->mRemoteActive0Client.socket,
             SOL_SOCKET,
             SO_RCVTIMEO,
-            reinterpret_cast<Jchar *>(&this->mRemoteActive0Client.readCountTimes),
+            &this->mRemoteActive0Client.readCountTimes,
             sizeof(this->mRemoteActive0Client.readCountTimes)
         ) != 0)
             return false;

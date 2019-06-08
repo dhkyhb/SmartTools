@@ -24,7 +24,7 @@ public:
 
         for (i = 0; i < static_cast<Jint>(aLen); ++i)
         {
-            if (a[i] == b[i])
+            if (a[i] != b[i])
             {
                 state = false;
                 break;
@@ -92,6 +92,21 @@ public:
         }
 
         return (++step);
+    }
+
+    static Jint HexString2Int32(const Jchar *v)
+    {
+        constexpr Jint HEX_STRING_2_INT32_SIZE = 4;
+        static Jbyte tmp[HEX_STRING_2_INT32_SIZE];
+
+        Jint ret = 0;
+
+        if(v == nullptr)
+            return 0;
+        if (ret = String2Bytes(v, tmp, sizeof(tmp));(ret > 2) || (ret < 1))
+            return 0;
+
+        return static_cast<Jint>(tmp[0]);
     }
 
 private:

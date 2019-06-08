@@ -3,6 +3,7 @@
 
 #include "../kernel.hpp"
 #include "../smart_utils/smart_utils_strings.hpp"
+#include "../smart_utils/smart_utils_simple_http.hpp"
 
 #include "smart_android_config.hpp"
 
@@ -10,17 +11,16 @@
 
 #include <APosSecurityManager.h>
 
-#include <boost/asio.hpp>
-#include <boost/beast.hpp>
-
 namespace smart::android::remote::active1
 {
 
 using smart::utils::strings::Strings;
+using smart::utils::simple::http::Http;
+using smart::utils::simple::http::HttpMethod;
 using smart::android::config::Config;
 
 constexpr Jint REMOTE_ACTIVE1_AREA_CODE_SIZE = 2048;
-constexpr Jint REMOTE_ACTIVE1_REQUEST_CACHE_SIZE = 4096;
+constexpr Jint REMOTE_ACTIVE1_CLIENT_BUF_SIZE = 4096;
 
 typedef struct
 {
@@ -44,48 +44,29 @@ typedef struct
     std::mutex lock;
 } POSSupport;
 
-typedef struct BoostSupport
+typedef struct
 {
-    boost::asio::io_context context;
-    boost::asio::ip::tcp::resolver resolver;
+    Jint socket;
+    Jchar target[REMOTE_ACTIVE1_CLIENT_BUF_SIZE];
+    Jchar cache[REMOTE_ACTIVE1_CLIENT_BUF_SIZE];
 
-    boost::beast::tcp_stream httpStream;
-    boost::beast::http::request<boost::beast::http::string_body> request;
-    boost::beast::http::response<boost::beast::http::dynamic_body> response;
-    boost::beast::flat_buffer buffer;
-    boost::beast::error_code errorCode;
+    sockaddr_in sockaddrIn;
+    timeval readCountTimes;
+    timeval writeCountTimes;
 
-    timeval readTimeouts;
-    timeval writeTimeouts;
-
-    std::stringstream jsonHandle;
-    Jchar cache[REMOTE_ACTIVE1_REQUEST_CACHE_SIZE];
-
-    BoostSupport() :
-        context{},
-        resolver{this->context},
-        httpStream{this->context},
-        request{},
-        response{},
-        buffer{},
-        errorCode{},
-        readTimeouts{},
-        writeTimeouts{},
-        jsonHandle{},
-        cache{}
-    {}
-} BoostSupport;
+    Http http;
+} RemoteActive1Client;
 
 constexpr Jint REMOTEACTIVE1_APPLY_ACTIVE_CODE_BY_SP_OF_MODE = 0;
 constexpr Jint REMOTEACTIVE1_REQUEST_TIMEOUTS = 3;
 constexpr Jint REMOTEACTIVE1_RESPONSE_TIMEOUTS = 3;
 
-constexpr Jchar REMOTEACTIVE1_TARGET_REQUEST_REGISTER[] = "/posService/requestunlock";
-constexpr Jchar REMOTEACTIVE1_TARGET_REQUEST_SEARCH[] = "/posService/pollunlock";
-constexpr Jchar REMOTEACTIVE1_TARGET_REQUEST_UPDATE_STATE[] = "/posService/unlocksuccess";
-constexpr Jchar REMOTEACTIVE1_REQUEST_FORMATS[] =
+constexpr Jchar REMOTEACTIVE1_TARGET_REQUEST_REGISTER[] =
+    "/posService/requestunlock?"
     "dsn=%s&activateCode=%s&model=%s&ptype=%d&clientCode=%s&"
     "sonClientCode=%s&hardwareVersion=%s&softwareVersion=%s";
+constexpr Jchar REMOTEACTIVE1_TARGET_REQUEST_SEARCH[] = "/posService/pollunlock";
+constexpr Jchar REMOTEACTIVE1_TARGET_REQUEST_UPDATE_STATE[] = "/posService/unlocksuccess";
 
 // New version, it's based on HTTP protocol to unlock request.
 class RemoteActive1
@@ -162,13 +143,13 @@ public:
 
 private:
     POSSupport mPOSSupport;
-    BoostSupport mBoostSupport;
     RemoteActive1Area mRemoteActive1Area;
+    RemoteActive1Client mRemoteActive1Client;
 
     RemoteActive1() :
         mPOSSupport{},
-        mBoostSupport{},
-        mRemoteActive1Area{}
+        mRemoteActive1Area{},
+        mRemoteActive1Client{}
     {}
 
     Jbool Check()
@@ -206,115 +187,112 @@ private:
 
     Jbool Register()
     {
+        Jint ret = 0;
         Jbool state = false;
 
-        if (!this->NetOpen())
+        if (!this->Mashal())
             return state;
+        if (!this->SocketInit())
+            return state;
+
+        this->mRemoteActive1Client.http.Init()
+            .SetMethod(HttpMethod::GET)
+            .SetHost(Config::Instance().GetRemoteActivationAddress())
+            .SetTarget(this->mRemoteActive1Client.target);
+
+        auto &&httpContent = this->mRemoteActive1Client.http.Marshal();
+        if (httpContent == nullptr)
+            return false;
 
         do
         {
-            if (!this->NetSetParameter())
+            auto &&targetLen = strlen(httpContent);
+            ret = send(this->mRemoteActive1Client.socket, httpContent, targetLen, 0);
+            if (ret < 1)
                 break;
 
-            this->mBoostSupport.request.method(boost::beast::http::verb::post);
-            this->mBoostSupport.request.target(REMOTEACTIVE1_TARGET_REQUEST_REGISTER);
-            this->mBoostSupport.request.version(11);
-            if (!this->Mashal())
-                break;
-
-            this->mBoostSupport.request.set(boost::beast::http::field::body, this->mBoostSupport.cache);
-            this->mBoostSupport.request.content_length(strlen(this->mBoostSupport.cache));
-
-//            Log::Instance().Print<LogType::DEBUG>("Request: \r\n%s\r\n", this->mBoostSupport.request);
-            boost::beast::http::write(
-                this->mBoostSupport.httpStream,
-                this->mBoostSupport.request,
-                this->mBoostSupport.errorCode
+            memset(this->mRemoteActive1Client.cache, 0, sizeof(this->mRemoteActive1Client.cache));
+            ret = recv(
+                this->mRemoteActive1Client.socket,
+                this->mRemoteActive1Client.cache,
+                sizeof(this->mRemoteActive1Client.cache),
+                0
             );
-            if (this->mBoostSupport.errorCode != boost::beast::errc::success)
+            if (ret < 1)
+                break;
+            if (!this->mRemoteActive1Client.http.Parse(this->mRemoteActive1Client.cache, ret))
                 break;
 
-            boost::beast::http::read(
-                this->mBoostSupport.httpStream,
-                this->mBoostSupport.buffer,
-                this->mBoostSupport.response,
-                this->mBoostSupport.errorCode
-            );
-            if (this->mBoostSupport.errorCode != boost::beast::errc::success)
-                break;
-
-            if (!this->Parse())
-                break;
-
+            Log::Instance().Print<LogType::DEBUG>("body: %s", this->mRemoteActive1Client.http.GetBody());
             state = true;
         } while (false);
 
-        if (!this->NetClose())
-            state = false;
-
+        this->SocketClose();
         return state;
     }
 
-
-    Jbool NetOpen()
+    Jbool SocketInit()
     {
-        constexpr Jint EXECUTE_UNLOCK_MESSAGE_CONV_PORT_SIZE = 64;
-        static Jchar convPort[EXECUTE_UNLOCK_MESSAGE_CONV_PORT_SIZE];
+        Jint i = 0;
 
-        memset(convPort, 0, sizeof(convPort));
-        if (snprintf(convPort, sizeof(convPort), "%d", Config::Instance().GetRemoteActivationPort()) < 1)
+        auto &&hostT = gethostbyname(Config::Instance().GetRemoteActivationAddress());
+        if (hostT == nullptr)
             return false;
 
-        auto &&results = this->mBoostSupport.resolver.resolve(
-            Config::Instance().GetRemoteActivationAddress(),
-            convPort
-        );
+        while ((*hostT).h_addr_list[i] != nullptr)
+        {
+            Log::Instance().Print<LogType::DEBUG>(
+                "remote activation address parse: %s",
+                inet_ntoa(*reinterpret_cast<in_addr *>((*hostT).h_addr_list[i]))
+            );
+            ++i;
+        }
 
-        this->mBoostSupport.httpStream.connect(results, this->mBoostSupport.errorCode);
-        return (this->mBoostSupport.errorCode == boost::beast::errc::success);
-    }
+        if (i < 1)
+            return false;
 
-    Jbool NetSetParameter()
-    {
-        this->mBoostSupport.readTimeouts.tv_sec = REMOTEACTIVE1_REQUEST_TIMEOUTS;
-        this->mBoostSupport.writeTimeouts.tv_sec = REMOTEACTIVE1_RESPONSE_TIMEOUTS;
+        this->mRemoteActive1Client.socket = socket(AF_INET, SOCK_STREAM, 0);
+        this->mRemoteActive1Client.sockaddrIn.sin_family = AF_INET;
+        this->mRemoteActive1Client.sockaddrIn.sin_port = htons(Config::Instance().GetRemoteActivationPort());
+        this->mRemoteActive1Client.sockaddrIn.sin_addr = *reinterpret_cast<in_addr *>((*hostT).h_addr_list[0]);
+
+        if (connect(
+            this->mRemoteActive1Client.socket,
+            reinterpret_cast<sockaddr *>(&this->mRemoteActive1Client.sockaddrIn),
+            sizeof(this->mRemoteActive1Client.sockaddrIn)
+        ) == -1)
+            return false;
+
+        this->mRemoteActive1Client.readCountTimes.tv_sec = REMOTEACTIVE1_RESPONSE_TIMEOUTS;
+        this->mRemoteActive1Client.writeCountTimes.tv_sec = REMOTEACTIVE1_REQUEST_TIMEOUTS;
 
         if (setsockopt(
-            this->mBoostSupport.httpStream.socket().native_handle(),
+            this->mRemoteActive1Client.socket,
             SOL_SOCKET,
             SO_SNDTIMEO,
-            reinterpret_cast<Jchar *>(&this->mBoostSupport.writeTimeouts),
-            sizeof(this->mBoostSupport.writeTimeouts)
+            &this->mRemoteActive1Client.writeCountTimes,
+            sizeof(this->mRemoteActive1Client.writeCountTimes)
         ) != 0)
             return false;
 
         if (setsockopt(
-            this->mBoostSupport.httpStream.socket().native_handle(),
+            this->mRemoteActive1Client.socket,
             SOL_SOCKET,
             SO_RCVTIMEO,
-            reinterpret_cast<Jchar *>(&this->mBoostSupport.readTimeouts),
-            sizeof(this->mBoostSupport.readTimeouts)
+            &this->mRemoteActive1Client.readCountTimes,
+            sizeof(this->mRemoteActive1Client.readCountTimes)
         ) != 0)
             return false;
 
-        auto &&flag = fcntl(this->mBoostSupport.httpStream.socket().native_handle(), F_GETFL, 0);
-        fcntl(this->mBoostSupport.httpStream.socket().native_handle(), F_SETFL, (flag & ~O_NONBLOCK));
+        auto &&flag = fcntl(this->mRemoteActive1Client.socket, F_GETFL, 0);
+        fcntl(this->mRemoteActive1Client.socket, F_SETFL, (flag & ~O_NONBLOCK));
         Log::Instance().Print<LogType::INFO>("remote activation socket initialization successful");
         return true;
     }
 
-    Jbool NetClose()
+    void SocketClose()
     {
-        this->mBoostSupport.request.clear();
-        this->mBoostSupport.response.clear();
-        this->mBoostSupport.buffer.clear();
-        this->mBoostSupport.jsonHandle.str("");
-
-        this->mBoostSupport.httpStream.socket().shutdown(
-            boost::asio::ip::tcp::socket::shutdown_both,
-            this->mBoostSupport.errorCode
-        );
-        return (this->mBoostSupport.errorCode == boost::beast::errc::success);
+        shutdown(this->mRemoteActive1Client.socket, SHUT_RDWR);
     }
 
     Jbool SetActiveCodeBySP()
@@ -371,11 +349,13 @@ private:
 
     Jbool Mashal()
     {
-        memset(this->mBoostSupport.cache, 0, sizeof(this->mBoostSupport.cache));
-        return (snprintf(
-            this->mBoostSupport.cache,
-            (sizeof(this->mBoostSupport.cache) - 1),
-            REMOTEACTIVE1_REQUEST_FORMATS,
+        Jint ret = 0;
+
+        memset(this->mRemoteActive1Client.target, 0, sizeof(this->mRemoteActive1Client.target));
+        ret = snprintf(
+            this->mRemoteActive1Client.target,
+            (sizeof(this->mRemoteActive1Client.target) - 1),
+            REMOTEACTIVE1_TARGET_REQUEST_REGISTER,
             this->mRemoteActive1Area.sn,
             this->mRemoteActive1Area.code,
             this->mRemoteActive1Area.model,
@@ -384,12 +364,8 @@ private:
             this->mRemoteActive1Area.subCustomer,
             this->mRemoteActive1Area.hardwareVersion,
             this->mRemoteActive1Area.softwareVersion
-        ) > 0);
-    }
-
-    Jbool Parse()
-    {
-        return false;
+        );
+        return ((ret > 0) && (ret < static_cast<Jint>(sizeof(this->mRemoteActive1Client.target) - 1)));
     }
 };
 
