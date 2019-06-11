@@ -208,7 +208,8 @@ private:
         auto &&httpLinkBodySymbolLen = strlen(HTTP_LINK_BODY_SYMBOL);
         i += (this->mHttpAttr.bodyMark - this->mHttpAttr.cache + httpLinkBodySymbolLen);
 
-        if (Strings::Equals(this->mHttpAttr.transaferEncoding, HTTP_PROTOCOL_HEAD_TRANSFER_ENCODEING_CHUNKED))
+        if ((this->mHttpAttr.transaferEncoding != nullptr)
+            && (Strings::Equals(this->mHttpAttr.transaferEncoding, HTTP_PROTOCOL_HEAD_TRANSFER_ENCODEING_CHUNKED)))
         {
             backupI = i;
             auto &&body = strstr(&this->mHttpAttr.cache[i], HTTP_LINK_SEGMENT_SYMBOL);
@@ -219,9 +220,8 @@ private:
             this->mHttpAttr.cache[i] = 0x00;
             i += httpLinkSegmentSymbolLen;
 
-            auto &&bodyLen = Strings::HexString2Int32(&this->mHttpAttr.cache[backupI]);
+            auto &&bodyLen = Strings::HexString2Int16(&this->mHttpAttr.cache[backupI]);
             this->mHttpAttr.body = &this->mHttpAttr.cache[i];
-            backupI = i;
             i += bodyLen + 1;
             this->mHttpAttr.cache[i] = 0x00;
         } else

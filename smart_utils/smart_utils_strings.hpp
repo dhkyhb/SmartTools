@@ -94,14 +94,30 @@ public:
         return (++step);
     }
 
-    static Jint HexString2Int32(const Jchar *v)
+    static Jint LittleHex2Int32(const Jbyte *v, Jint vLen)
+    {
+        constexpr Jint LITTLE_HEX_2_INT64_SIZE = 4;
+
+        Jint ret = 0;
+
+        if ((v == nullptr) || (vLen < LITTLE_HEX_2_INT64_SIZE))
+            return ret;
+
+        ret = v[3] << 24u;
+        ret += v[2] << 16u;
+        ret += v[1] << 8u;
+        ret += v[0];
+        return ret;
+    }
+
+    static Jint HexString2Int16(const Jchar *v)
     {
         constexpr Jint HEX_STRING_2_INT32_SIZE = 4;
         static Jbyte tmp[HEX_STRING_2_INT32_SIZE];
 
         Jint ret = 0;
 
-        if(v == nullptr)
+        if (v == nullptr)
             return 0;
         if (ret = String2Bytes(v, tmp, sizeof(tmp));(ret > 2) || (ret < 1))
             return 0;

@@ -7,6 +7,7 @@
 #include <jni.h>
 
 using smart::resouces::status::StatusType;
+using smart::resouces::errors::ErrorsType;
 using smart::android::everything::Everything;
 using smart::android::everything::EverythingType;
 
@@ -29,14 +30,14 @@ typedef struct JniEverything
     std::mutex jniLock;
 
     JniEverything() :
-        env{},
-        javaVm{},
-        callObject{},
-        callClass{},
-        callExecute{},
-        callProcess{},
-        callEnd{},
-        jniLock{}
+            env{},
+            javaVm{},
+            callObject{},
+            callClass{},
+            callExecute{},
+            callProcess{},
+            callEnd{},
+            jniLock{}
     {}
 } JniEverything;
 
@@ -46,7 +47,7 @@ JNIEXPORT void JNICALL Java_cn_smartpeak_tools_Everything_Listen(JNIEnv *env, jo
 {
     constexpr static Jchar JNI_EVERYTHING_CALLBACK_EXECUTE_METHOD_PARAMETER[] = "(I)V";
     constexpr static Jchar JNI_EVERYTHING_CALLBACK_PROCESS_METHOD_PARAMETER[] = "(I)V";
-    constexpr static Jchar JNI_EVERYTHING_CALLBACK_END_METHOD_PARAMETER[] = "(IZ)V";
+    constexpr static Jchar JNI_EVERYTHING_CALLBACK_END_METHOD_PARAMETER[] = "(IZI)V";
     constexpr static Jchar JNI_EVERYTHING_CALLBACK_EXECUTE_METHOD_NAME[] = "Execute";
     constexpr static Jchar JNI_EVERYTHING_CALLBACK_PROCESS_METHOD_NAME[] = "Process";
     constexpr static Jchar JNI_EXERYTHING_CALLBACK_END_METHOD_NAME[] = "End";
@@ -56,8 +57,13 @@ JNIEXPORT void JNICALL Java_cn_smartpeak_tools_Everything_Listen(JNIEnv *env, jo
 
     if (JniEverythingCall == nullptr)
         JniEverythingCall = new JniEverything();
+
     if (((*JniEverythingCall).javaVm != nullptr) || ((*JniEverythingCall).callObject != nullptr))
-        return;
+    {
+        (*env).DeleteGlobalRef((*JniEverythingCall).callObject);
+        (*JniEverythingCall).javaVm = nullptr;
+        (*JniEverythingCall).callObject = nullptr;
+    }
 
     (*JniEverythingCall).jniLock.lock();
     if ((*JniEverythingCall).javaVm == nullptr)
@@ -66,52 +72,58 @@ JNIEXPORT void JNICALL Java_cn_smartpeak_tools_Everything_Listen(JNIEnv *env, jo
         (*JniEverythingCall).callObject = (*env).NewGlobalRef(javaCall);
 
     Everything::Instance().NeedInit().SetExecuteThingListen(
-        JniEverythingCall,
-        [](void *p) {
-            auto &jni = *reinterpret_cast<JniEverything *>(p);
+            JniEverythingCall,
+            [](void *p) {
+                auto &jni = *reinterpret_cast<JniEverything *>(p);
 
-            Log::Instance().Print<LogType::INFO>("initialization everything listener");
-            if (jni.javaVm->AttachCurrentThread(&jni.env, nullptr) != JNI_OK)
-                return;
-            if (jni.callClass = (*jni.env).GetObjectClass(jni.callObject);jni.callClass == nullptr)
-                return;
+                Log::Instance().Print<LogType::INFO>("initialization everything listener");
+                if (jni.javaVm->AttachCurrentThread(&jni.env, nullptr) != JNI_OK)
+                    return;
+                if (jni.callClass = (*jni.env).GetObjectClass(jni.callObject);jni.callClass == nullptr)
+                    return;
 
-            jni.callExecute = (*jni.env).GetMethodID(
-                jni.callClass,
-                JNI_EVERYTHING_CALLBACK_EXECUTE_METHOD_NAME,
-                JNI_EVERYTHING_CALLBACK_EXECUTE_METHOD_PARAMETER
-            );
-            jni.callProcess = (*jni.env).GetMethodID(
-                jni.callClass,
-                JNI_EVERYTHING_CALLBACK_PROCESS_METHOD_NAME,
-                JNI_EVERYTHING_CALLBACK_PROCESS_METHOD_PARAMETER
-            );
-            jni.callEnd = (*jni.env).GetMethodID(
-                jni.callClass,
-                JNI_EXERYTHING_CALLBACK_END_METHOD_NAME,
-                JNI_EVERYTHING_CALLBACK_END_METHOD_PARAMETER
-            );
+                jni.callExecute = (*jni.env).GetMethodID(
+                        jni.callClass,
+                        JNI_EVERYTHING_CALLBACK_EXECUTE_METHOD_NAME,
+                        JNI_EVERYTHING_CALLBACK_EXECUTE_METHOD_PARAMETER
+                );
+                jni.callProcess = (*jni.env).GetMethodID(
+                        jni.callClass,
+                        JNI_EVERYTHING_CALLBACK_PROCESS_METHOD_NAME,
+                        JNI_EVERYTHING_CALLBACK_PROCESS_METHOD_PARAMETER
+                );
+                jni.callEnd = (*jni.env).GetMethodID(
+                        jni.callClass,
+                        JNI_EXERYTHING_CALLBACK_END_METHOD_NAME,
+                        JNI_EVERYTHING_CALLBACK_END_METHOD_PARAMETER
+                );
 
-            jni.env->DeleteLocalRef(jni.callClass);
-        },
-        [](void *p, Jint type) {
-            auto &jni = *reinterpret_cast<JniEverything *>(p);
+                jni.env->DeleteLocalRef(jni.callClass);
+            },
+            [](void *p, Jint type) {
+                auto &jni = *reinterpret_cast<JniEverything *>(p);
 
-            if ((jni.env != nullptr) && (jni.callObject != nullptr) && (jni.callExecute != nullptr))
-                (*jni.env).CallVoidMethod(jni.callObject, jni.callExecute, type);
-        },
-        [](void *p, StatusType status) {
-            auto &jni = *reinterpret_cast<JniEverything *>(p);
+                if ((jni.env != nullptr) && (jni.callObject != nullptr) && (jni.callExecute != nullptr))
+                    (*jni.env).CallVoidMethod(jni.callObject, jni.callExecute, type);
+            },
+            [](void *p, StatusType status) {
+                auto &jni = *reinterpret_cast<JniEverything *>(p);
 
-            if ((jni.env != nullptr) && (jni.callObject != nullptr) && (jni.callProcess != nullptr))
-                (*jni.env).CallVoidMethod(jni.callObject, jni.callProcess, static_cast<Jint>(status));
-        },
-        [](void *p, Jint type, Jbool state) {
-            auto &jni = *reinterpret_cast<JniEverything *>(p);
+                if ((jni.env != nullptr) && (jni.callObject != nullptr) && (jni.callProcess != nullptr))
+                    (*jni.env).CallVoidMethod(jni.callObject, jni.callProcess, static_cast<Jint>(status));
+            },
+            [](void *p, Jint type, Jbool state, ErrorsType errorsType) {
+                auto &jni = *reinterpret_cast<JniEverything *>(p);
 
-            if ((jni.env != nullptr) && (jni.callObject != nullptr) && (jni.callEnd != nullptr))
-                (*jni.env).CallVoidMethod(jni.callObject, jni.callEnd, type, state);
-        }
+                if ((jni.env != nullptr) && (jni.callObject != nullptr) && (jni.callEnd != nullptr))
+                    (*jni.env).CallVoidMethod(
+                            jni.callObject,
+                            jni.callEnd,
+                            type,
+                            state,
+                            static_cast<Jint>(errorsType)
+                    );
+            }
     ).Process();
 
     (*JniEverythingCall).jniLock.unlock();

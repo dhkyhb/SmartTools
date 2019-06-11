@@ -10,6 +10,7 @@ namespace smart::android::environment
 
 constexpr Jint ENVIRONMENT_SN_BUF_SIZE = 32;
 constexpr Jint ENVIRONMENT_MAX_CALL_INTERFACE_COUNT = 10;
+constexpr Jint ENVIRONMENT_CERT_BUF_SIZE = 4096;
 
 typedef struct
 {
@@ -17,11 +18,19 @@ typedef struct
     Jchar deviceModel[ENVIRONMENT_SN_BUF_SIZE];
     Jchar oldCustomer[ENVIRONMENT_SN_BUF_SIZE];
     Jchar oldSubCustomer[ENVIRONMENT_SN_BUF_SIZE];
+    Jchar androidVersion[ENVIRONMENT_SN_BUF_SIZE];
+    Jchar androidSDKVersion[ENVIRONMENT_SN_BUF_SIZE];
+    Jchar androidID[ENVIRONMENT_SN_BUF_SIZE];
+    Jchar androidDevice[ENVIRONMENT_SN_BUF_SIZE];
+    Jchar androidBootloader[ENVIRONMENT_SN_BUF_SIZE];
 
     Jchar customer[ENVIRONMENT_SN_BUF_SIZE];
     Jchar subCustomer[ENVIRONMENT_SN_BUF_SIZE];
     Jchar hardwareVersion[ENVIRONMENT_SN_BUF_SIZE];
     Jchar softwareVersion[ENVIRONMENT_SN_BUF_SIZE];
+    Jchar spVersion[ENVIRONMENT_SN_BUF_SIZE];
+
+    Jchar customerCheckCert[ENVIRONMENT_CERT_BUF_SIZE];
 } EnvironmentAttr;
 
 typedef struct
@@ -34,6 +43,8 @@ typedef struct
     Jchar *hardware;
     Jint softwareLen;
     Jchar *software;
+    Jint spVersionLen;
+    Jchar *spVersion;
     APosAccessoryManager *context;
 
     Jint count;
@@ -123,6 +134,114 @@ public:
         return (*this);
     }
 
+    Environment &SetAndroidVersion(const Jchar *v)
+    {
+        Jint vLen = 0;
+
+        do
+        {
+            if (v == nullptr)
+                break;
+            if (vLen = strlen(v);vLen > static_cast<Jint>(sizeof(this->mEnvironmentAttr.androidVersion) - 1))
+                break;
+
+            memset(this->mEnvironmentAttr.androidVersion, 0, sizeof(this->mEnvironmentAttr.androidVersion));
+            memcpy(this->mEnvironmentAttr.androidVersion, v, vLen);
+        } while (false);
+
+        return (*this);
+    }
+
+    Environment &SetAndroidSDKVersion(const Jchar *v)
+    {
+        Jint vLen = 0;
+
+        do
+        {
+            if (v == nullptr)
+                break;
+            if (vLen = strlen(v);vLen > static_cast<Jint>(sizeof(this->mEnvironmentAttr.androidSDKVersion) - 1))
+                break;
+
+            memset(this->mEnvironmentAttr.androidSDKVersion, 0, sizeof(this->mEnvironmentAttr.androidSDKVersion));
+            memcpy(this->mEnvironmentAttr.androidSDKVersion, v, vLen);
+        } while (false);
+
+        return (*this);
+    }
+
+    Environment &SetAndroidID(const Jchar *v)
+    {
+        Jint vLen = 0;
+
+        do
+        {
+            if (v == nullptr)
+                break;
+            if (vLen = strlen(v);vLen > static_cast<Jint>(sizeof(this->mEnvironmentAttr.androidID) - 1))
+                break;
+
+            memset(this->mEnvironmentAttr.androidID, 0, sizeof(this->mEnvironmentAttr.androidID));
+            memcpy(this->mEnvironmentAttr.androidID, v, vLen);
+        } while (false);
+
+        return (*this);
+    }
+
+    Environment &SetAndroidDevice(const Jchar *v)
+    {
+        Jint vLen = 0;
+
+        do
+        {
+            if (v == nullptr)
+                break;
+            if (vLen = strlen(v);vLen > static_cast<Jint>(sizeof(this->mEnvironmentAttr.androidDevice) - 1))
+                break;
+
+            memset(this->mEnvironmentAttr.androidDevice, 0, sizeof(this->mEnvironmentAttr.androidDevice));
+            memcpy(this->mEnvironmentAttr.androidDevice, v, vLen);
+        } while (false);
+
+        return (*this);
+    }
+
+    Environment &SetAndroidBootloader(const Jchar *v)
+    {
+        Jint vLen = 0;
+
+        do
+        {
+            if (v == nullptr)
+                break;
+            if (vLen = strlen(v);vLen > static_cast<Jint>(sizeof(this->mEnvironmentAttr.androidBootloader) - 1))
+                break;
+
+            memset(this->mEnvironmentAttr.androidBootloader, 0, sizeof(this->mEnvironmentAttr.androidBootloader));
+            memcpy(this->mEnvironmentAttr.androidBootloader, v, vLen);
+        } while (false);
+
+        return (*this);
+    }
+
+    Environment &SetCustomerCheckCert(const Jchar *v)
+    {
+        Jint vLen = 0;
+
+        do
+        {
+            if (v == nullptr)
+                break;
+            if (vLen = strlen(v);vLen > static_cast<Jint>(sizeof(this->mEnvironmentAttr.customerCheckCert) - 1))
+                break;
+
+            memset(this->mEnvironmentAttr.customerCheckCert, 0, sizeof(this->mEnvironmentAttr.customerCheckCert));
+            memcpy(this->mEnvironmentAttr.customerCheckCert, v, vLen);
+        } while (false);
+
+        return (*this);
+    }
+
     const Jchar *GetSN()
     {
         return this->mEnvironmentAttr.sn;
@@ -141,6 +260,36 @@ public:
     const Jchar *GetOldSubCustomer()
     {
         return this->mEnvironmentAttr.oldSubCustomer;
+    }
+
+    const Jchar *GetCustomerCheckCert()
+    {
+        return this->mEnvironmentAttr.customerCheckCert;
+    }
+
+    const Jchar *GetAndroidVersion()
+    {
+        return this->mEnvironmentAttr.androidVersion;
+    }
+
+    const Jchar *GetAndroidSDKVersion()
+    {
+        return this->mEnvironmentAttr.androidSDKVersion;
+    }
+
+    const Jchar *GetAndroidID()
+    {
+        return this->mEnvironmentAttr.androidID;
+    }
+
+    const Jchar *GetAndroidDevice()
+    {
+        return this->mEnvironmentAttr.androidDevice;
+    }
+
+    const Jchar *GetAndroidBootloader()
+    {
+        return this->mEnvironmentAttr.androidBootloader;
     }
 
     const Jchar *GetCustomer()
@@ -165,6 +314,12 @@ public:
     {
         this->ToGetSysInformations();
         return this->mEnvironmentAttr.softwareVersion;
+    }
+
+    const Jchar *GetSPVersion()
+    {
+        this->ToGetSysInformations();
+        return this->mEnvironmentAttr.spVersion;
     }
 
 private:
@@ -238,6 +393,12 @@ private:
             &this->mPOSSDKSupport.subCustomer,
             &this->mPOSSDKSupport.subCustomerLen
         );
+        APosAccessoryManager_getVersion(
+            this->mPOSSDKSupport.context,
+            VERSION_TYPE_SP,
+            &this->mPOSSDKSupport.spVersion,
+            &this->mPOSSDKSupport.spVersionLen
+        );
 
         if ((this->mPOSSDKSupport.hardware != nullptr) && (this->mPOSSDKSupport.hardwareLen > 0))
         {
@@ -279,6 +440,16 @@ private:
             );
         }
 
+        if ((this->mPOSSDKSupport.spVersion != nullptr) && (this->mPOSSDKSupport.spVersionLen > 0))
+        {
+            memset(this->mEnvironmentAttr.spVersion, 0, sizeof(this->mEnvironmentAttr.spVersion));
+            memcpy(
+                this->mEnvironmentAttr.spVersion,
+                this->mPOSSDKSupport.spVersion,
+                this->mPOSSDKSupport.spVersionLen
+            );
+        }
+
         if (this->mPOSSDKSupport.customer != nullptr)
             free(this->mPOSSDKSupport.customer);
         if (this->mPOSSDKSupport.subCustomer)
@@ -287,6 +458,8 @@ private:
             free(this->mPOSSDKSupport.hardware);
         if (this->mPOSSDKSupport.software != nullptr)
             free(this->mPOSSDKSupport.software);
+        if (this->mPOSSDKSupport.spVersion != nullptr)
+            free(this->mPOSSDKSupport.spVersion);
 
         this->mPOSSDKSupport.posMutex.unlock();
     }

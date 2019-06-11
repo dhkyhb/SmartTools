@@ -24,6 +24,7 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetAsset(JNIEnv *e
     constexpr Jint CONFIG_READ_CACHE_SIZE = 200;
     constexpr Jchar CONFIG_SYSTEM_DEFAULT_PATH[] = "/system/etc/app/cn.basewin.security.defense.system.xml";
     constexpr Jchar CONFIG_APP_DEFAULT_PATH[] = "config";
+    constexpr Jchar CONFIG_APP_DEFAULT_CA_CERT_PATH[] = "ca.crt";
 
     Jint ret = 0;
     Jchar readCache[CONFIG_READ_CACHE_SIZE];
@@ -59,18 +60,29 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetAsset(JNIEnv *e
             break;
 
         if (asset = AAssetManager_open(
-                assetManager,
-                CONFIG_APP_DEFAULT_PATH,
-                AASSET_MODE_UNKNOWN
+                    assetManager,
+                    CONFIG_APP_DEFAULT_PATH,
+                    AASSET_MODE_UNKNOWN
             );asset == nullptr)
             break;
 
         Config::Instance().WriteBuffer(
-            reinterpret_cast<Jchar *>(const_cast<void *>(AAsset_getBuffer(asset))),
-            AAsset_getLength(asset)
+                reinterpret_cast<Jchar *>(const_cast<void *>(AAsset_getBuffer(asset))),
+                AAsset_getLength(asset)
         );
 
-        Log::Instance().Print<LogType::DEBUG>("read from the apk");
+        AAsset_close(asset);
+
+        if (asset = AAssetManager_open(
+                    assetManager,
+                    CONFIG_APP_DEFAULT_CA_CERT_PATH,
+                    AASSET_MODE_UNKNOWN
+            );asset == nullptr)
+            break;
+
+        Environment::Instance().SetCustomerCheckCert(
+                reinterpret_cast<Jchar *>(const_cast<void *>(AAsset_getBuffer(asset)))
+        );
     } while (false);
 
     if (sysConfFile != nullptr)
@@ -125,9 +137,9 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetDeviceModel(JNI
 }
 
 JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetOldCustomer(
-    JNIEnv *env,
-    jobject self,
-    jstring oldCustomer
+        JNIEnv *env,
+        jobject self,
+        jstring oldCustomer
 )
 {
     const Jchar *cOldCustomer = nullptr;
@@ -143,9 +155,9 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetOldCustomer(
 }
 
 JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetOldSubCustomer(
-    JNIEnv *env,
-    jobject self,
-    jstring oldSubCustomer
+        JNIEnv *env,
+        jobject self,
+        jstring oldSubCustomer
 )
 {
     const Jchar *cOldSubCustomer = nullptr;
@@ -157,6 +169,96 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetOldSubCustomer(
 
     Environment::Instance().SetOldSubCustomer(cOldSubCustomer);
     (*env).ReleaseStringUTFChars(oldSubCustomer, cOldSubCustomer);
+    return self;
+}
+
+JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetAndroidVersion(
+        JNIEnv *env,
+        jobject self,
+        jstring androidVersion
+)
+{
+    const Jchar *cAndroidVersion = nullptr;
+
+    if ((env == nullptr) || (androidVersion == nullptr))
+        return self;
+    if (cAndroidVersion = (*env).GetStringUTFChars(androidVersion, JNI_FALSE);cAndroidVersion == nullptr)
+        return self;
+
+    Environment::Instance().SetAndroidVersion(cAndroidVersion);
+    (*env).ReleaseStringUTFChars(androidVersion, cAndroidVersion);
+    return self;
+}
+
+JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetAndroidSDKVersion(
+        JNIEnv *env,
+        jobject self,
+        jstring androidSDKVersion
+)
+{
+    const Jchar *cAndroidSDKVersion = nullptr;
+
+    if ((env == nullptr) || (androidSDKVersion == nullptr))
+        return self;
+    if (cAndroidSDKVersion = (*env).GetStringUTFChars(androidSDKVersion, JNI_FALSE);cAndroidSDKVersion == nullptr)
+        return self;
+
+    Environment::Instance().SetAndroidSDKVersion(cAndroidSDKVersion);
+    (*env).ReleaseStringUTFChars(androidSDKVersion, cAndroidSDKVersion);
+    return self;
+}
+
+JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetAndroidID(
+        JNIEnv *env,
+        jobject self,
+        jstring androidID
+)
+{
+    const Jchar *cAndroidID = nullptr;
+
+    if ((env == nullptr) || (androidID == nullptr))
+        return self;
+    if (cAndroidID = (*env).GetStringUTFChars(androidID, JNI_FALSE);cAndroidID == nullptr)
+        return self;
+
+    Environment::Instance().SetAndroidID(cAndroidID);
+    (*env).ReleaseStringUTFChars(androidID, cAndroidID);
+    return self;
+}
+
+JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetAndroidDevice(
+        JNIEnv *env,
+        jobject self,
+        jstring androidDevice
+)
+{
+    const Jchar *cAndroidDevice = nullptr;
+
+    if ((env == nullptr) || (androidDevice == nullptr))
+        return self;
+    if (cAndroidDevice = (*env).GetStringUTFChars(androidDevice, JNI_FALSE);cAndroidDevice == nullptr)
+        return self;
+
+    Environment::Instance().SetAndroidDevice(cAndroidDevice);
+    (*env).ReleaseStringUTFChars(androidDevice, cAndroidDevice);
+    return self;
+}
+
+JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetAndroidBootloader(
+        JNIEnv *env,
+        jobject self,
+        jstring androidBootloader
+)
+{
+    const Jchar *cAndroidBootloader = nullptr;
+
+    if ((env == nullptr) || (androidBootloader == nullptr))
+        return self;
+    if (cAndroidBootloader = (*env).GetStringUTFChars(androidBootloader, JNI_FALSE);cAndroidBootloader == nullptr)
+        return self;
+
+    Environment::Instance().SetAndroidBootloader(cAndroidBootloader);
+    (*env).ReleaseStringUTFChars(androidBootloader, cAndroidBootloader);
     return self;
 }
 

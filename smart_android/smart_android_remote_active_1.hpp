@@ -7,9 +7,10 @@
 
 #include "smart_android_config.hpp"
 
-#include <fcntl.h>
-
 #include <APosSecurityManager.h>
+#include <boost/property_tree/json_parser.hpp>
+
+#include <fcntl.h>
 
 namespace smart::android::remote::active1
 {
@@ -21,6 +22,14 @@ using smart::android::config::Config;
 
 constexpr Jint REMOTE_ACTIVE1_AREA_CODE_SIZE = 2048;
 constexpr Jint REMOTE_ACTIVE1_CLIENT_BUF_SIZE = 4096;
+
+
+enum class RemoteActive1Procedure
+{
+    REGISTER,
+    CHECK,
+    RECORD,
+};
 
 typedef struct
 {
@@ -44,7 +53,7 @@ typedef struct
     std::mutex lock;
 } POSSupport;
 
-typedef struct
+typedef struct RemoteActive1Client
 {
     Jint socket;
     Jchar target[REMOTE_ACTIVE1_CLIENT_BUF_SIZE];
@@ -54,7 +63,22 @@ typedef struct
     timeval readCountTimes;
     timeval writeCountTimes;
 
+    std::stringstream jsonStream;
+    boost::property_tree::ptree jsonRoot;
+
     Http http;
+
+    RemoteActive1Client() :
+        socket{},
+        target{},
+        cache{},
+        sockaddrIn{},
+        readCountTimes{},
+        writeCountTimes{},
+        jsonStream{},
+        jsonRoot{},
+        http{}
+    {}
 } RemoteActive1Client;
 
 constexpr Jint REMOTEACTIVE1_APPLY_ACTIVE_CODE_BY_SP_OF_MODE = 0;
@@ -65,8 +89,11 @@ constexpr Jchar REMOTEACTIVE1_TARGET_REQUEST_REGISTER[] =
     "/posService/requestunlock?"
     "dsn=%s&activateCode=%s&model=%s&ptype=%d&clientCode=%s&"
     "sonClientCode=%s&hardwareVersion=%s&softwareVersion=%s";
-constexpr Jchar REMOTEACTIVE1_TARGET_REQUEST_SEARCH[] = "/posService/pollunlock";
-constexpr Jchar REMOTEACTIVE1_TARGET_REQUEST_UPDATE_STATE[] = "/posService/unlocksuccess";
+constexpr Jchar REMOTEACTIVE1_TARGET_REQUEST_SEARCH[] = "/posService/pollunlock?dsn=%s";
+constexpr Jchar REMOTEACTIVE1_TARGET_REQUEST_UPDATE_STATE[] = "/posService/unlocksuccess?dsn=%s";
+
+constexpr Jchar REMOTEACTIVE1_TARGET_RESPONSE_STATE[] = "success";
+constexpr Jchar REMOTEACTIVE1_TARGET_RESPONSE_MSG[] = "msg";
 
 // New version, it's based on HTTP protocol to unlock request.
 class RemoteActive1
@@ -94,8 +121,6 @@ public:
             if (!this->GetActiveCodeBySP())
                 break;
             if (!this->ExecuteUnlock())
-                break;
-            if (!this->SetActiveCodeBySP())
                 break;
 
             state = true;
@@ -182,15 +207,39 @@ private:
 
     Jbool ExecuteUnlock()
     {
-        return this->Register();
+        Jint times = 0;
+        Jbool state = false;
+
+        if (!this->Unlock<RemoteActive1Procedure::REGISTER>())
+            return state;
+
+        while (times < Config::Instance().GetRemoteActivationTimeouts())
+        {
+            state = this->Unlock<RemoteActive1Procedure::CHECK>();
+            if (state)
+                break;
+            times += REMOTEACTIVE1_REQUEST_TIMEOUTS;
+            sleep(REMOTEACTIVE1_REQUEST_TIMEOUTS);
+        }
+
+        if (state)
+        {
+            if (!this->SetActiveCodeBySP())
+                return false;
+            if (!this->Unlock<RemoteActive1Procedure::RECORD>())
+                return false;
+        }
+
+        return state;
     }
 
-    Jbool Register()
+    template<RemoteActive1Procedure _Procedure>
+    Jbool Unlock()
     {
         Jint ret = 0;
         Jbool state = false;
 
-        if (!this->Mashal())
+        if (!this->Mashal<_Procedure>())
             return state;
         if (!this->SocketInit())
             return state;
@@ -223,11 +272,15 @@ private:
             if (!this->mRemoteActive1Client.http.Parse(this->mRemoteActive1Client.cache, ret))
                 break;
 
-            Log::Instance().Print<LogType::DEBUG>("body: %s", this->mRemoteActive1Client.http.GetBody());
+            this->mRemoteActive1Client.jsonStream.str(this->mRemoteActive1Client.http.GetBody());
+            Log::Instance().Print<LogType::DEBUG>("Unlock: %s", this->mRemoteActive1Client.http.GetBody());
             state = true;
         } while (false);
 
         this->SocketClose();
+        if (state)
+            state = this->Parse<_Procedure>();
+
         return state;
     }
 
@@ -347,25 +400,86 @@ private:
         return true;
     }
 
+    template<RemoteActive1Procedure _Procedure>
     Jbool Mashal()
     {
         Jint ret = 0;
 
         memset(this->mRemoteActive1Client.target, 0, sizeof(this->mRemoteActive1Client.target));
-        ret = snprintf(
-            this->mRemoteActive1Client.target,
-            (sizeof(this->mRemoteActive1Client.target) - 1),
-            REMOTEACTIVE1_TARGET_REQUEST_REGISTER,
-            this->mRemoteActive1Area.sn,
-            this->mRemoteActive1Area.code,
-            this->mRemoteActive1Area.model,
-            1,
-            this->mRemoteActive1Area.customer,
-            this->mRemoteActive1Area.subCustomer,
-            this->mRemoteActive1Area.hardwareVersion,
-            this->mRemoteActive1Area.softwareVersion
-        );
+        if (_Procedure == RemoteActive1Procedure::REGISTER)
+            ret = snprintf(
+                this->mRemoteActive1Client.target,
+                (sizeof(this->mRemoteActive1Client.target) - 1),
+                REMOTEACTIVE1_TARGET_REQUEST_REGISTER,
+                this->mRemoteActive1Area.sn,
+                this->mRemoteActive1Area.code,
+                this->mRemoteActive1Area.model,
+                1,
+                this->mRemoteActive1Area.customer,
+                this->mRemoteActive1Area.subCustomer,
+                this->mRemoteActive1Area.hardwareVersion,
+                this->mRemoteActive1Area.softwareVersion
+            );
+        else if (_Procedure == RemoteActive1Procedure::CHECK)
+            ret = snprintf(
+                this->mRemoteActive1Client.target,
+                (sizeof(this->mRemoteActive1Client.target) - 1),
+                REMOTEACTIVE1_TARGET_REQUEST_SEARCH,
+                this->mRemoteActive1Area.sn
+            );
+        else if (_Procedure == RemoteActive1Procedure::RECORD)
+            ret = snprintf(
+                this->mRemoteActive1Client.target,
+                (sizeof(this->mRemoteActive1Client.target) - 1),
+                REMOTEACTIVE1_TARGET_REQUEST_UPDATE_STATE,
+                this->mRemoteActive1Area.sn
+            );
         return ((ret > 0) && (ret < static_cast<Jint>(sizeof(this->mRemoteActive1Client.target) - 1)));
+    }
+
+    template<RemoteActive1Procedure _Procedure>
+    Jbool Parse()
+    {
+        boost::property_tree::read_json(
+            this->mRemoteActive1Client.jsonStream,
+            this->mRemoteActive1Client.jsonRoot
+        );
+
+        if (_Procedure == RemoteActive1Procedure::REGISTER)
+        {
+            if (this->mRemoteActive1Client.jsonRoot.get_optional<bool>(
+                REMOTEACTIVE1_TARGET_RESPONSE_STATE
+            ).get_ptr() == nullptr)
+                return false;
+
+            return this->mRemoteActive1Client.jsonRoot.get<bool>(REMOTEACTIVE1_TARGET_RESPONSE_STATE);
+        } else if (_Procedure == RemoteActive1Procedure::CHECK)
+        {
+            if (this->mRemoteActive1Client.jsonRoot.get_optional<bool>(
+                REMOTEACTIVE1_TARGET_RESPONSE_STATE
+            ).get_ptr() == nullptr)
+                return false;
+
+            if (this->mRemoteActive1Client.jsonRoot.get_optional<std::string>(
+                REMOTEACTIVE1_TARGET_RESPONSE_MSG
+            ).get_ptr() == nullptr)
+                return false;
+
+            auto &&code = this->mRemoteActive1Client.jsonRoot.get<std::string>(REMOTEACTIVE1_TARGET_RESPONSE_MSG);
+            memset(this->mRemoteActive1Area.code, 0, sizeof(this->mRemoteActive1Area.code));
+            memcpy(this->mRemoteActive1Area.code, code.c_str(), code.size());
+            return this->mRemoteActive1Client.jsonRoot.get<bool>(REMOTEACTIVE1_TARGET_RESPONSE_STATE);
+        } else if (_Procedure == RemoteActive1Procedure::RECORD)
+        {
+            if (this->mRemoteActive1Client.jsonRoot.get_optional<bool>(
+                REMOTEACTIVE1_TARGET_RESPONSE_STATE
+            ).get_ptr() == nullptr)
+                return false;
+
+            return this->mRemoteActive1Client.jsonRoot.get<bool>(REMOTEACTIVE1_TARGET_RESPONSE_STATE);
+        }
+
+        return false;
     }
 };
 
