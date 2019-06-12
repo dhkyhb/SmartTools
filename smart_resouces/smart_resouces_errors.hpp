@@ -11,8 +11,8 @@ enum class ErrorsType
     SERVER_REQUEST_TIMEOUTS,
     SERVER_REQUEST_FAIL,
 
-    POS_NEED_SHORT_SMALL_BATTERY,
-    POS_NEED_REBOOT,
+    POS_NEED_SHORT_SMALL_BATTERY_OR_REBOOT,
+    POS_ACTIVATED,
 };
 
 typedef struct
@@ -47,7 +47,7 @@ private:
     ErrorsAttr mErrorsAttr;
 
     Errors() :
-            mErrorsAttr{}
+        mErrorsAttr{}
     {}
 };
 

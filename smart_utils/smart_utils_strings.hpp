@@ -62,20 +62,40 @@ public:
         Jint i = 0;
         Jint step = 0;
         Jint vLen = 0;
+        Jbool isOddNum = false;
+        Jbool mark = false;
 
         Jchar tmp = 0;
         Jbyte uTmp = 0;
 
         if ((v == nullptr) || (ret == nullptr) || (retLen < 1))
             return step;
-        if (vLen = strlen(v);(vLen / 2) > retLen)
-            return step;
+
+        vLen = strlen(v);
+        if (isOddNum = (vLen % 2 > 0 ? true : false); isOddNum)
+        {
+            if (((vLen + 1) / 2) > retLen)
+                return step;
+
+            mark = true;
+        } else
+        {
+            if ((vLen / 2) > retLen)
+                return step;
+        }
 
         memset(ret, 0, retLen);
         for (i = 0; i < vLen; ++i)
         {
-            if (((i % 2) == 0) && (i != 0))
-                ++step;
+            if(mark)
+            {
+                if (((i % 2) > 0) && (i != 0))
+                    ++step;
+            }else
+            {
+                if (((i % 2) == 0) && (i != 0))
+                    ++step;
+            }
 
             tmp = v[i];
             if ((tmp > 0x40) && (tmp < 0x47))
@@ -83,12 +103,29 @@ public:
             else if ((tmp > 0x60) && (tmp < 0x67))
                 uTmp = static_cast<Jbyte>(tmp - 0x61 + 0x0A);
             else
-                uTmp = static_cast<Jbyte>(tmp - '0x30');
+                uTmp = static_cast<Jbyte>(tmp - 0x30);
 
-            if ((i % 2) == 1)
-                ret[step] |= uTmp;
-            else
-                ret[step] |= uTmp << 4u;
+            if(isOddNum)
+            {
+                if(i == 0)
+                    ret[step] |= uTmp;
+                isOddNum = false;
+                continue;
+            }
+
+            if(mark)
+            {
+                if ((i % 2) == 0)
+                    ret[step] |= uTmp;
+                else
+                    ret[step] |= uTmp << 4u;
+            }else
+            {
+                if ((i % 2) > 0)
+                    ret[step] |= uTmp;
+                else
+                    ret[step] |= uTmp << 4u;
+            }
         }
 
         return (++step);
@@ -110,16 +147,31 @@ public:
         return ret;
     }
 
-    static Jint HexString2Int16(const Jchar *v)
+    static Jint HexString2Int32(const Jchar *v)
     {
-        constexpr Jint HEX_STRING_2_INT32_SIZE = 4;
+        constexpr Jint HEX_STRING_2_INT32_SIZE = 2;
         static Jbyte tmp[HEX_STRING_2_INT32_SIZE];
 
         Jint ret = 0;
 
         if (v == nullptr)
             return 0;
-        if (ret = String2Bytes(v, tmp, sizeof(tmp));(ret > 2) || (ret < 1))
+        if (ret = String2Bytes(v, tmp, sizeof(tmp));(ret > HEX_STRING_2_INT32_SIZE) || (ret < 1))
+            return 0;
+
+        return ((tmp[0] << 8u) + tmp[1]);
+    }
+
+    static Jint HexString2Int16(const Jchar *v)
+    {
+        constexpr Jint HEX_STRING_2_INT16_SIZE = 1;
+        static Jbyte tmp[HEX_STRING_2_INT16_SIZE];
+
+        Jint ret = 0;
+
+        if (v == nullptr)
+            return 0;
+        if (ret = String2Bytes(v, tmp, sizeof(tmp));(ret > HEX_STRING_2_INT16_SIZE) || (ret < 1))
             return 0;
 
         return static_cast<Jint>(tmp[0]);

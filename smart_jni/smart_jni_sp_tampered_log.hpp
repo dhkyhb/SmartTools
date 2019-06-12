@@ -13,69 +13,121 @@ extern "C"
 {
 #endif
 
-JNIEXPORT jobjectArray JNICALL Java_cn_smartpeak_tools_SPRecordLog_GetRecords(JNIEnv *env, jobject self)
+JNIEXPORT jobjectArray JNICALL Java_cn_smartpeak_tools_SmartSPRecordLog_GetRecords(JNIEnv *env, jobject self)
 {
+    constexpr Jchar JNI_OBJ_INIT_METHOD[] = "<init>";
+    constexpr Jchar JNI_OBJ_INIT_METHOD_PARAMETER[] = "()V";
+    constexpr Jchar JNI_FIELD_INT_TYPE[] = "I";
+    constexpr Jchar JNI_FIELD_STRING_TYPE[] = "Ljava/lang/String;";
+
+    constexpr Jchar SP_RECORD_LOG_RECORD_CLASS_PATH[] = "cn/smartpeak/tools/SmartSPRecordLog$Record";
+    constexpr Jchar SP_RECORD_LOG_RECORD_CLASS_INIT_METHOD_PATH[] = "(Lcn/smartpeak/tools/SmartSPRecordLog;)V";
+
+    constexpr Jchar SP_RECORD_LOG_RECORD_FIELD_TIME[] = "mTime";
+    constexpr Jchar SP_RECORD_LOG_RECORD_FIELD_CATEGORY[] = "mCategory";
+    constexpr Jchar SP_RECORD_LOG_RECORD_FIELD_TYPE[] = "mType";
+
     Jint i = 0;
-    jobjectArray objectArr = nullptr;
+    jobjectArray SPRecordLogRecordArr = nullptr;
 
-    jclass recordCls = nullptr;
-    jmethodID clsInit = nullptr;
-    jfieldID clsTime = nullptr;
-    jfieldID clsCategory = nullptr;
-    jfieldID clsType = nullptr;
+    jclass SPRecordLogOfSonCls = nullptr;
+    jobject SPRecordLogOfSonObj = nullptr;
+    jmethodID SPRecordLogRecordOfInit = nullptr;
+    jfieldID SPRecordLogRecordPTime = nullptr;
+    jfieldID SPRecordLogRecordPCategory = nullptr;
+    jfieldID SPRecordLogRecordPType = nullptr;
 
-    jobject recordObj = nullptr;
-    jstring timeStr = nullptr;
+    jclass SPRecordLogCls = nullptr;
+    jobject SPRecordLogObj = nullptr;
+    jmethodID SPRecordLogOfInit = nullptr;
 
     if (env == nullptr)
         return nullptr;
-    if (recordCls = (*env).FindClass("cn/smartpeak/tools/Record");recordCls == nullptr)
+    if (SPRecordLogCls = (*env).GetObjectClass(self);SPRecordLogCls == nullptr)
+        return nullptr;
+    if (SPRecordLogOfSonCls = (*env).FindClass(SP_RECORD_LOG_RECORD_CLASS_PATH);SPRecordLogOfSonCls == nullptr)
         return nullptr;
 
-    do
+    if (SPRecordLogRecordArr = (*env).NewObjectArray(
+            SPTamperedLog::Instance().GetRecordLength(),
+            SPRecordLogOfSonCls,
+            nullptr
+        );SPRecordLogRecordArr == nullptr)
+        return nullptr;
+
+    if (SPRecordLogOfInit = (*env).GetMethodID(
+            SPRecordLogCls,
+            JNI_OBJ_INIT_METHOD,
+            JNI_OBJ_INIT_METHOD_PARAMETER
+        );SPRecordLogOfInit == nullptr)
+        return nullptr;
+
+    if (SPRecordLogRecordOfInit = (*env).GetMethodID(
+            SPRecordLogOfSonCls,
+            JNI_OBJ_INIT_METHOD,
+            SP_RECORD_LOG_RECORD_CLASS_INIT_METHOD_PATH
+        );SPRecordLogRecordOfInit == nullptr)
+        return nullptr;
+
+    if (SPRecordLogRecordPTime = (*env).GetFieldID(
+            SPRecordLogOfSonCls,
+            SP_RECORD_LOG_RECORD_FIELD_TIME,
+            JNI_FIELD_STRING_TYPE
+        );SPRecordLogRecordPTime == nullptr)
+        return nullptr;
+
+    if (SPRecordLogRecordPCategory = (*env).GetFieldID(
+            SPRecordLogOfSonCls,
+            SP_RECORD_LOG_RECORD_FIELD_CATEGORY,
+            JNI_FIELD_INT_TYPE
+        );SPRecordLogRecordPCategory == nullptr)
+        return nullptr;
+
+    if (SPRecordLogRecordPType = (*env).GetFieldID(
+            SPRecordLogOfSonCls,
+            SP_RECORD_LOG_RECORD_FIELD_TYPE,
+            JNI_FIELD_INT_TYPE
+        );SPRecordLogRecordPType == nullptr)
+        return nullptr;
+
+    if (SPRecordLogObj = (*env).NewObject(SPRecordLogCls, SPRecordLogOfInit);SPRecordLogObj == nullptr)
+        return nullptr;
+
+    for (i = 0; i < SPTamperedLog::Instance().GetRecordLength(); ++i)
     {
-        if (objectArr = (*env).NewObjectArray(
-                    SPTamperedLog::Instance().GetRecordLength(),
-                    recordCls,
-                    nullptr
-            );objectArr == nullptr)
-            break;
+        if (SPRecordLogOfSonObj = (*env).NewObject(
+                SPRecordLogOfSonCls,
+                SPRecordLogRecordOfInit,
+                SPRecordLogObj
+            );SPRecordLogOfSonObj == nullptr)
+            continue;
 
-        if (clsInit = (*env).GetMethodID(recordCls, "<init>", "()V");clsInit == nullptr)
-            break;
-        if (clsTime = (*env).GetFieldID(recordCls, "mTime", "Ljava/lang/String;");clsTime == nullptr)
-            break;
-        if (clsCategory = (*env).GetFieldID(recordCls, "mCategory", "I");clsCategory == nullptr)
-            break;
-        if (clsType = (*env).GetFieldID(recordCls, "mType", "I");clsType == nullptr)
-            break;
-
-        for (i = 0; i < SPTamperedLog::Instance().GetRecordLength(); ++i)
+        do
         {
-            if (recordObj = (*env).NewObject(recordCls, clsInit);recordObj == nullptr)
-                continue;
+            auto &&mTimeStr = (*env).NewStringUTF(SPTamperedLog::Instance().GetRecords()[i].time);
+            if (mTimeStr == nullptr)
+                break;
 
-            do
-            {
-                if (timeStr = (*env).NewStringUTF(SPTamperedLog::Instance().GetRecords()[i].time);timeStr == nullptr)
-                    break;
+            (*env).SetObjectField(SPRecordLogOfSonObj, SPRecordLogRecordPTime, mTimeStr);
+            (*env).SetIntField(
+                SPRecordLogOfSonObj,
+                SPRecordLogRecordPType,
+                SPTamperedLog::Instance().GetRecords()[i].type
+            );
+            (*env).SetIntField(
+                SPRecordLogOfSonObj,
+                SPRecordLogRecordPCategory,
+                static_cast<Jint>(SPTamperedLog::Instance().GetRecords()[i].category)
+            );
 
-                (*env).SetObjectField(recordObj, clsTime, timeStr);
-                (*env).SetIntField(
-                        recordObj,
-                        clsCategory,
-                        static_cast<Jint>(SPTamperedLog::Instance().GetRecords()[i].category)
-                );
-                (*env).SetIntField(recordObj, clsType, SPTamperedLog::Instance().GetRecords()[i].type);
-                (*env).SetObjectArrayElement(objectArr, i, recordObj);
-            } while (false);
+            (*env).SetObjectArrayElement(SPRecordLogRecordArr, i, SPRecordLogOfSonObj);
+            (*env).DeleteLocalRef(mTimeStr);
+        }while(false);
 
-            (*env).DeleteLocalRef(timeStr);
-            (*env).DeleteLocalRef(recordObj);
-        }
-    } while (false);
+        (*env).DeleteLocalRef(SPRecordLogOfSonObj);
+    }
 
-    return objectArr;
+    return SPRecordLogRecordArr;
 }
 
 #ifdef __cplusplus

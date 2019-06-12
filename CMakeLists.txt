@@ -14,6 +14,9 @@ ENDIF ()
 IF (NOT NDK_SUPPORT)
     MESSAGE(FATAL_ERROR "You need set NDK_SUPPORT, because this item to use it.")
 ENDIF ()
+IF (NOT MBEDTLS_SUPPORT)
+    MESSAGE(FATAL_ERROR "You need set MBEDTLS_SUPPORT, because this item to use it")
+ENDIF ()
 
 # POSSDK
 INCLUDE_DIRECTORIES(${POSSDK_SUPPORT}/include)
@@ -25,6 +28,9 @@ SET(BOOST_SUPPORT_LIB -L${BOOST_SUPPORT}/lib -lboost_system)
 
 # NDK support
 INCLUDE_DIRECTORIES(${NDK_SUPPORT}/include)
+
+# Mbedtls support
+INCLUDE_DIRECTORIES(${MBEDTLS_SUPPORT}/include)
 
 # Utils module
 ADD_SUBDIRECTORY(smart_test_resouce)

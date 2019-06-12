@@ -203,6 +203,7 @@ private:
     {
         Jint i = 0;
         Jint backupI = 0;
+        Jint bodyLen = 0;
 
         auto &&httpLinkSegmentSymbolLen = strlen(HTTP_LINK_SEGMENT_SYMBOL);
         auto &&httpLinkBodySymbolLen = strlen(HTTP_LINK_BODY_SYMBOL);
@@ -220,7 +221,12 @@ private:
             this->mHttpAttr.cache[i] = 0x00;
             i += httpLinkSegmentSymbolLen;
 
-            auto &&bodyLen = Strings::HexString2Int16(&this->mHttpAttr.cache[backupI]);
+            auto &&checkValueLen = strlen(&this->mHttpAttr.cache[backupI]);
+            if (checkValueLen > 2)
+                bodyLen = Strings::HexString2Int32(&this->mHttpAttr.cache[backupI]);
+            else
+                bodyLen = Strings::HexString2Int16(&this->mHttpAttr.cache[backupI]);
+
             this->mHttpAttr.body = &this->mHttpAttr.cache[i];
             i += bodyLen + 1;
             this->mHttpAttr.cache[i] = 0x00;

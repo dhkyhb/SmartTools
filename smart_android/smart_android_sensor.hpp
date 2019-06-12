@@ -14,7 +14,6 @@ enum class SensorRoute
     TWO,
     THREE,
     FOUR,
-    NEED_REBOOT,
 };
 
 enum class SensorState
@@ -51,6 +50,10 @@ constexpr Jbyte SENSOR_ROUTE_CODE_ONE_VALUE = 0x02;
 constexpr Jbyte SENSOR_ROUTE_CODE_TWO_VALUE = 0x04;
 constexpr Jbyte SENSOR_ROUTE_CODE_TREE_VALUE = 0x08;
 constexpr Jbyte SENSOR_ROUTE_CODE_FOUR_VALUE = 0x10;
+
+constexpr Jchar SENSOR_POS_PLATFORM_PROTOCOL_IDENTIFIER_K21 = 0x22;
+constexpr Jchar SENSOR_POS_PLATFORM_PROTOCOL_IDENTIFIER_3255 = 0x0C;
+constexpr Jchar SENSOR_POS_PLATFORM_PROTOCOL_IDENTIFIER_M1902 = 0xCC;
 
 class Sensor
 {
@@ -96,8 +99,10 @@ public:
         return state;
     }
 
-    Sensor &Check()
+    Jbool Check()
     {
+        Jbool state = false;
+
         do
         {
             if (!this->POSContextInit())
@@ -111,12 +116,16 @@ public:
                 &this->mPOSSDKSupport.sensorArrayLen
             );
 
-            this->DistinguishRoute();
-            this->DistinguishResults();
+            if (!this->DistinguishRoute())
+                break;
+            if (!this->DistinguishResults())
+                break;
+
+            state = true;
         } while (false);
 
         this->PosContextRelease();
-        return (*this);
+        return state;
     }
 
     SensorState GetSensorState()
@@ -158,40 +167,100 @@ private:
         this->mPOSSDKSupport.posMutex.unlock();
     }
 
-    void DistinguishRoute()
+    Jbool DistinguishRoute()
     {
         Jint step = 0;
         Juint routeCode = 0;
         Juint routeEnum = 0;
 
-        if ((this->mPOSSDKSupport.sensorArray == nullptr) || (this->mPOSSDKSupport.sensorArrayLen > 4))
-        {
-            this->mSensorAttr.route = SensorRoute::NEED_REBOOT;
-            return;
-        }
+        if ((this->mPOSSDKSupport.sensorArray == nullptr) || (this->mPOSSDKSupport.sensorArrayLen < 1))
+            return false;
 
         routeCode = this->mPOSSDKSupport.sensorArray[step];
         routeCode += static_cast<Juint>(this->mPOSSDKSupport.sensorArray[++step]) << 8u;
         routeCode += static_cast<Juint>(this->mPOSSDKSupport.sensorArray[++step]) << 16u;
         routeCode += static_cast<Juint>(this->mPOSSDKSupport.sensorArray[++step]) << 24u;
 
-        if (routeCode & SENSOR_ROUTE_CODE_ONE_VALUE)
+        if ((routeCode & SENSOR_ROUTE_CODE_ONE_VALUE) == SENSOR_ROUTE_CODE_ONE_VALUE)
             routeEnum |= static_cast<Juint>(SensorRoute::ONE);
-        if (routeCode & SENSOR_ROUTE_CODE_TWO_VALUE)
+        if ((routeCode & SENSOR_ROUTE_CODE_TWO_VALUE) == SENSOR_ROUTE_CODE_TWO_VALUE)
             routeEnum |= static_cast<Juint>(SensorRoute::TWO);
-        if (routeCode & SENSOR_ROUTE_CODE_TREE_VALUE)
+        if ((routeCode & SENSOR_ROUTE_CODE_TREE_VALUE) == SENSOR_ROUTE_CODE_TREE_VALUE)
             routeEnum |= static_cast<Juint>(SensorRoute::THREE);
-        if (routeCode & SENSOR_ROUTE_CODE_FOUR_VALUE)
+        if ((routeCode & SENSOR_ROUTE_CODE_FOUR_VALUE) == SENSOR_ROUTE_CODE_FOUR_VALUE)
             routeEnum |= static_cast<Juint>(SensorRoute::FOUR);
 
         this->mSensorAttr.route = static_cast<SensorRoute>(routeEnum);
+        ++step;
+        if (this->mPOSSDKSupport.sensorArrayLen > 5)
+        {
+            if (this->mPOSSDKSupport.sensorArray[step] == SENSOR_POS_PLATFORM_PROTOCOL_IDENTIFIER_K21)
+            {
+                step += 2;
+                Log::Instance().Print<LogType::DEBUG>("the K21 platform, the tampered time:");
+                Log::Instance().PrintHex(
+                    reinterpret_cast<Jbyte *>(&this->mPOSSDKSupport.sensorArray[step]),
+                    (this->mPOSSDKSupport.sensorArrayLen - step)
+                );
+            } else if (this->mPOSSDKSupport.sensorArray[step] == SENSOR_POS_PLATFORM_PROTOCOL_IDENTIFIER_3255)
+            {
+                Log::Instance().Print<LogType::DEBUG>("the 3255 platform");
+                Log::Instance().Print<LogType::DEBUG>(
+                    "register 0CH: %02X and 04H: %02X",
+                    this->mPOSSDKSupport.sensorArray[step],
+                    this->mPOSSDKSupport.sensorArray[step + 1]
+                );
+
+                step += 2;
+                if ((this->mPOSSDKSupport.sensorArrayLen - step - 4) < 0)
+                    return true;
+
+                Log::Instance().Print<LogType::DEBUG>("SECDIAG:");
+                Log::Instance().PrintHex(reinterpret_cast<Jbyte *>(&this->mPOSSDKSupport.sensorArray[step]), 4);
+                step += 4;
+                if ((this->mPOSSDKSupport.sensorArrayLen - step - 2) < 0)
+                    return true;
+
+                Log::Instance().Print<LogType::DEBUG>(
+                    "register 08H: %02X and 04H: %02X",
+                    this->mPOSSDKSupport.sensorArray[step],
+                    this->mPOSSDKSupport.sensorArray[step + 1]
+                );
+
+                step += 2;
+                if ((this->mPOSSDKSupport.sensorArrayLen - step - 4) < 0)
+                    return true;
+
+                Log::Instance().Print<LogType::DEBUG>("SECALM:");
+                Log::Instance().PrintHex(reinterpret_cast<Jbyte *>(&this->mPOSSDKSupport.sensorArray[step]), 4);
+            } else if (this->mPOSSDKSupport.sensorArray[step] == SENSOR_POS_PLATFORM_PROTOCOL_IDENTIFIER_M1902)
+            {
+                Log::Instance().Print<LogType::DEBUG>("the M1902 platform");
+                Log::Instance().Print<LogType::DEBUG>(
+                    "register CCH: %02X and 04H",
+                    this->mPOSSDKSupport.sensorArray[step],
+                    this->mPOSSDKSupport.sensorArray[step + 1]
+                );
+
+                step += 2;
+                if ((this->mPOSSDKSupport.sensorArrayLen - step - 4) < 0)
+                    return true;
+
+                Log::Instance().Print<LogType::DEBUG>("SEN_STATE:");
+                Log::Instance().PrintHex(reinterpret_cast<Jbyte *>(&this->mPOSSDKSupport.sensorArray[step]), 4);
+            }
+        }
+        return true;
     }
 
-    void DistinguishResults()
+    Jbool DistinguishResults()
     {
+        if (this->mPOSSDKSupport.sensorCheckState == -1)
+            return false;
+
         if (this->mPOSSDKSupport.sensorCheckState == 0)
             this->mSensorAttr.state = SensorState::ACTIVE;
-        else if ((this->mPOSSDKSupport.sensorCheckState == -1) || (this->mPOSSDKSupport.sensorCheckState == 0xFFFF))
+        else if (this->mPOSSDKSupport.sensorCheckState == 0xFFFF)
             this->mSensorAttr.state = SensorState::ENABLED;
         else if ((this->mPOSSDKSupport.sensorCheckState == -2) || (this->mPOSSDKSupport.sensorCheckState == 0xFFFE))
             this->mSensorAttr.state = SensorState::ROUTE_IS_DISCONNECTED;
@@ -205,6 +274,8 @@ private:
             this->mSensorAttr.state = SensorState::TAMPERED;
         else
             this->mSensorAttr.state = SensorState::UNKNOWN_ERROR;
+
+        return true;
     }
 };
 

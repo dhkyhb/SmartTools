@@ -42,6 +42,7 @@ enum class EverythingType
     REMOTE_ACTIVATION1,
     CUSTOMER_CHECK_UNLOCK,
     GET_SP_TAMPERED_LOG,
+    IF_NOTIFY_TAMPERED_USE_IT,
 };
 
 typedef struct
@@ -82,11 +83,11 @@ public:
 
     template<typename Init, typename Execute, typename Process, typename End>
     Everything &SetExecuteThingListen(
-            void *p,
-            ItType<Init> fun0,
-            ItType<Execute> fun1,
-            ItType<Process> fun2,
-            ItType<End> fun3
+        void *p,
+        ItType<Init> fun0,
+        ItType<Execute> fun1,
+        ItType<Process> fun2,
+        ItType<End> fun3
     )
     {
         this->mEverythingLineUp.p = p;
@@ -125,7 +126,7 @@ private:
     EverythingLineUp mEverythingLineUp;
 
     Everything() :
-            mEverythingLineUp{}
+        mEverythingLineUp{}
     {}
 
     void Listen()
@@ -154,10 +155,15 @@ private:
                     if (!v.isUing)
                         continue;
 
-                    if (v.thingType == EverythingType::REMOTE_ACTIVATION0)
+                    thing.thingExecute(thing.p, static_cast<Jint>(v.thingType));
+                    if (v.thingType == EverythingType::IF_NOTIFY_TAMPERED_USE_IT)
+                    {
+                        Log::Instance().Print<LogType::INFO>("check the device tampered");
+                        while (!Sensor::Instance().Check());
+                        state = true;
+                    } else if (v.thingType == EverythingType::REMOTE_ACTIVATION0)
                     {
                         Log::Instance().Print<LogType::INFO>("ready for remote activation");
-                        thing.thingExecute(thing.p, static_cast<Jint>(v.thingType));
 
                         do
                         {
@@ -177,7 +183,6 @@ private:
                     } else if (v.thingType == EverythingType::REMOTE_ACTIVATION1)
                     {
                         Log::Instance().Print<LogType::INFO>("ready for remote activation 1");
-                        thing.thingExecute(thing.p, static_cast<Jint>(v.thingType));
 
                         do
                         {
@@ -187,12 +192,12 @@ private:
 
                             thing.thingProcess(thing.p, StatusType::REMOTE_ACTIVATION1_UNLOCK_READY);
                             if (!RemoteActive1::Instance().SetSN(Environment::Instance().GetSN())
-                                    .SetModel(Environment::Instance().GetDeviceModel())
-                                    .SetCustomer(Environment::Instance().GetCustomer())
-                                    .SetSubCustomer(Environment::Instance().GetSubCustomer())
-                                    .SetHardwareVersion(Environment::Instance().GetHardwareVersion())
-                                    .SetSoftwareVersion(Environment::Instance().GetSoftwareVersion())
-                                    .ApplyUnlock())
+                                .SetModel(Environment::Instance().GetDeviceModel())
+                                .SetCustomer(Environment::Instance().GetCustomer())
+                                .SetSubCustomer(Environment::Instance().GetSubCustomer())
+                                .SetHardwareVersion(Environment::Instance().GetHardwareVersion())
+                                .SetSoftwareVersion(Environment::Instance().GetSoftwareVersion())
+                                .ApplyUnlock())
                                 break;
                             thing.thingProcess(thing.p, StatusType::REMOTE_ACTIVATION1_UNLOCK_DONE);
 
@@ -206,16 +211,15 @@ private:
                     } else if (v.thingType == EverythingType::GET_SP_TAMPERED_LOG)
                     {
                         Log::Instance().Print<LogType::INFO>("get the SP tampered log");
-                        thing.thingExecute(thing.p, static_cast<Jint>(v.thingType));
                         state = SPTamperedLog::Instance().Process();
                     }
 
                     v.isUing = false;
                     thing.thingEnd(
-                            thing.p,
-                            static_cast<Jint>(v.thingType),
-                            state,
-                            (state ? ErrorsType::SUCCESS : Errors::Instance().GetErrorType())
+                        thing.p,
+                        static_cast<Jint>(v.thingType),
+                        state,
+                        (state ? ErrorsType::SUCCESS : Errors::Instance().GetErrorType())
                     );
                 }
 

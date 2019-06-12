@@ -2,9 +2,20 @@
 #define SMARTTOOLS_SMART_ANDROID_CUSTOMER_CHECK_UNLOCK_HPP
 
 #include "../kernel.hpp"
+#include "../smart_utils/smart_utils_simple_http.hpp"
+#include "../smart_resouces/smart_resouces_errors.hpp"
+
+#include <mbedtls/ssl.h>
 
 namespace smart::android::customer::check::unlock
 {
+
+using smart::utils::simple::http::Http;
+using smart::utils::simple::http::HttpMethod;
+using smart::resouces::errors::Errors;
+using smart::resouces::errors::ErrorsType;
+
+constexpr Jint CUSTOMER_CHECK_UNLOCK_BUF_SIZE = 2048;
 
 typedef struct
 {
@@ -17,6 +28,23 @@ typedef struct
     const Jchar *hardwareVersion;
     const Jchar *softwareVersion;
 } CustomerCheckUnlockAttr;
+
+typedef struct
+{
+    Jint socket;
+    Jchar target[CUSTOMER_CHECK_UNLOCK_BUF_SIZE];
+    Jchar cache[CUSTOMER_CHECK_UNLOCK_BUF_SIZE];
+
+    sockaddr_in sockaddrIn;
+    timeval readTimeouts;
+    timeval writeTimeouts;
+
+    mbedtls_x509_crt mbedtlsX509Crt;
+    mbedtls_ssl_config mbedtlsSslConfig;
+    mbedtls_ssl_context mbedtlsSslContext;
+
+    Http http;
+} CustomerCheckUnlockClient;
 
 class CustomerCheckUnlock
 {
@@ -33,7 +61,12 @@ public:
     {
         if (!this->Check())
             return false;
-        return false;
+        if (!this->ExecuteUnlock())
+        {
+            Errors::Instance().SetErrorType<ErrorsType::SERVER_REQUEST_TIMEOUTS>();
+            return false;
+        }
+        return true;
     }
 
     CustomerCheckUnlock &SetSN(const Jchar *v)
@@ -74,9 +107,11 @@ public:
 
 private:
     CustomerCheckUnlockAttr mCustomerCheckUnlockAttr;
+    CustomerCheckUnlockClient mCustomerCheckUnlockClient;
 
     CustomerCheckUnlock() :
-        mCustomerCheckUnlockAttr{}
+        mCustomerCheckUnlockAttr{},
+        mCustomerCheckUnlockClient{}
     {}
 
     Jbool Check()
@@ -89,6 +124,36 @@ private:
                 && (this->mCustomerCheckUnlockAttr.oldSubCustomer != nullptr)
                 && (this->mCustomerCheckUnlockAttr.hardwareVersion != nullptr)
                 && (this->mCustomerCheckUnlockAttr.softwareVersion != nullptr));
+    }
+
+    Jbool ExecuteUnlock()
+    {
+        return true;
+    }
+
+    Jbool HttpRequest()
+    {
+        return false;
+    }
+
+    Jbool SSLInit()
+    {
+        return false;
+    }
+
+    Jbool SSLRelease()
+    {
+        return false;
+    }
+
+    Jbool SocketInit()
+    {
+        return false;
+    }
+
+    Jbool SocketClose()
+    {
+        return false;
     }
 };
 

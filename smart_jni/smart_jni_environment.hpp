@@ -19,7 +19,7 @@ extern "C"
 {
 #endif
 
-JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetAsset(JNIEnv *env, jobject self, jobject assetContex)
+JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetAsset(JNIEnv *env, jobject self, jobject assetContex)
 {
     constexpr Jint CONFIG_READ_CACHE_SIZE = 200;
     constexpr Jchar CONFIG_SYSTEM_DEFAULT_PATH[] = "/system/etc/app/cn.basewin.security.defense.system.xml";
@@ -99,7 +99,7 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetAsset(JNIEnv *e
     return self;
 }
 
-JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetSN(JNIEnv *env, jobject self, jstring sn)
+JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetSN(JNIEnv *env, jobject self, jstring sn)
 {
     const Jchar *cSN = nullptr;
 
@@ -113,7 +113,7 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetSN(JNIEnv *env,
     return self;
 }
 
-JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetThreadLoopSize(JNIEnv *env, jobject self, jint size)
+JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetThreadLoopSize(JNIEnv *env, jobject self, jint size)
 {
     if ((env == nullptr) || (size < 1))
         return self;
@@ -122,7 +122,7 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetThreadLoopSize(
     return self;
 }
 
-JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetDeviceModel(JNIEnv *env, jobject self, jstring model)
+JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetDeviceModel(JNIEnv *env, jobject self, jstring model)
 {
     const Jchar *cModel = nullptr;
 
@@ -136,7 +136,7 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetDeviceModel(JNI
     return self;
 }
 
-JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetOldCustomer(
+JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetOldCustomer(
         JNIEnv *env,
         jobject self,
         jstring oldCustomer
@@ -154,7 +154,7 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetOldCustomer(
     return self;
 }
 
-JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetOldSubCustomer(
+JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetOldSubCustomer(
         JNIEnv *env,
         jobject self,
         jstring oldSubCustomer
@@ -172,7 +172,7 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetOldSubCustomer(
     return self;
 }
 
-JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetAndroidVersion(
+JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetAndroidVersion(
         JNIEnv *env,
         jobject self,
         jstring androidVersion
@@ -190,7 +190,7 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetAndroidVersion(
     return self;
 }
 
-JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetAndroidSDKVersion(
+JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetAndroidSDKVersion(
         JNIEnv *env,
         jobject self,
         jstring androidSDKVersion
@@ -208,7 +208,7 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetAndroidSDKVersi
     return self;
 }
 
-JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetAndroidID(
+JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetAndroidID(
         JNIEnv *env,
         jobject self,
         jstring androidID
@@ -226,7 +226,7 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetAndroidID(
     return self;
 }
 
-JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetAndroidDevice(
+JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetAndroidDevice(
         JNIEnv *env,
         jobject self,
         jstring androidDevice
@@ -244,7 +244,7 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetAndroidDevice(
     return self;
 }
 
-JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Environment_SetAndroidBootloader(
+JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetAndroidBootloader(
         JNIEnv *env,
         jobject self,
         jstring androidBootloader

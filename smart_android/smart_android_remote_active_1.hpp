@@ -4,6 +4,7 @@
 #include "../kernel.hpp"
 #include "../smart_utils/smart_utils_strings.hpp"
 #include "../smart_utils/smart_utils_simple_http.hpp"
+#include "../smart_resouces/smart_resouces_errors.hpp"
 
 #include "smart_android_config.hpp"
 
@@ -18,6 +19,8 @@ namespace smart::android::remote::active1
 using smart::utils::strings::Strings;
 using smart::utils::simple::http::Http;
 using smart::utils::simple::http::HttpMethod;
+using smart::resouces::errors::Errors;
+using smart::resouces::errors::ErrorsType;
 using smart::android::config::Config;
 
 constexpr Jint REMOTE_ACTIVE1_AREA_CODE_SIZE = 2048;
@@ -117,11 +120,22 @@ public:
         do
         {
             if (!this->POSInit())
+            {
+                Errors::Instance().SetErrorType<ErrorsType::POS_NEED_SHORT_SMALL_BATTERY_OR_REBOOT>();
                 break;
+            }
+
             if (!this->GetActiveCodeBySP())
+            {
+                Errors::Instance().SetErrorType<ErrorsType::POS_ACTIVATED>();
                 break;
+            }
+
             if (!this->ExecuteUnlock())
+            {
+                Errors::Instance().SetErrorType<ErrorsType::SERVER_REQUEST_TIMEOUTS>();
                 break;
+            }
 
             state = true;
         } while (false);

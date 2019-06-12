@@ -4,6 +4,7 @@
 #include "../kernel.hpp"
 #include "../smart_utils/smart_utils_log.hpp"
 #include "../smart_utils/smart_utils_math.hpp"
+#include "../smart_resouces/smart_resouces_errors.hpp"
 #include "../smart_android/smart_android_config.hpp"
 
 #include <APosSecurityManager.h>
@@ -20,6 +21,8 @@ namespace smart::android::remote::active0
 using smart::utils::log::Log;
 using smart::utils::log::LogType;
 using smart::utils::math::Math;
+using smart::resouces::errors::Errors;
+using smart::resouces::errors::ErrorsType;
 using smart::android::config::Config;
 
 constexpr Jint REMOTEACTIVE0_DAM_DATA_AREA_SN_SIZE = 32;
@@ -97,13 +100,28 @@ public:
         do
         {
             if (!this->POSInit())
+            {
+                Errors::Instance().SetErrorType<ErrorsType::POS_NEED_SHORT_SMALL_BATTERY_OR_REBOOT>();
                 break;
+            }
+
             if (!this->GetActiveCodeBySP())
+            {
+                Errors::Instance().SetErrorType<ErrorsType::POS_ACTIVATED>();
                 break;
+            }
+
             if (!this->SocketInit())
+            {
+                Errors::Instance().SetErrorType<ErrorsType::SERVER_REQUEST_FAIL>();
                 break;
+            }
+
             if (!this->ExecuteUnlockMessage())
+            {
+                Errors::Instance().SetErrorType<ErrorsType::SERVER_REQUEST_TIMEOUTS>();
                 break;
+            }
 
             state = true;
             Log::Instance().Print<LogType::INFO>("remote activation is activation sussesful");
@@ -275,15 +293,17 @@ private:
 
     Jbool GetActiveCodeBySP()
     {
-        if (APosSecurityManager_SysRemoteUnlockReq(
-            this->mPOSSDKSupport.context,
-            REMOTEACTIVE0_APPLY_ACTIVE_CODE_BY_SP_OF_MODE,
-            &this->mPOSSDKSupport.activeCode,
-            &this->mPOSSDKSupport.activeCodeLen
-        ) != 0)
+        Jint ret = 0;
+
+        if (ret = APosSecurityManager_SysRemoteUnlockReq(
+                this->mPOSSDKSupport.context,
+                REMOTEACTIVE0_APPLY_ACTIVE_CODE_BY_SP_OF_MODE,
+                &this->mPOSSDKSupport.activeCode,
+                &this->mPOSSDKSupport.activeCodeLen
+            );ret != 0)
             return false;
 
-        Log::Instance().Print<LogType::DEBUG>("apply activation code by the SP is successful");
+        Log::Instance().Print<LogType::DEBUG>("apply activation code ret: %d",ret);
         if (this->mPOSSDKSupport.activeCode == nullptr)
             return false;
         if (this->mPOSSDKSupport.activeCodeLen > static_cast<Jint>(
@@ -292,7 +312,6 @@ private:
             return false;
 
         this->mRemoteActive0DAM.damDataArea.codeLen = (this->mPOSSDKSupport.activeCodeLen -= 3);
-
         memcpy(
             this->mRemoteActive0DAM.damDataArea.code,
             &this->mPOSSDKSupport.activeCode[3],

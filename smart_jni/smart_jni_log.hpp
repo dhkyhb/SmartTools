@@ -14,7 +14,7 @@ extern "C"
 {
 #endif
 
-JNIEXPORT void JNICALL Java_cn_smartpeak_tools_Log_SetTag(JNIEnv *env, jclass self, jstring content)
+JNIEXPORT void JNICALL Java_cn_smartpeak_tools_SmartLog_SetTag(JNIEnv *env, jclass self, jstring content)
 {
     const Jchar *cContent = nullptr;
 
@@ -27,7 +27,7 @@ JNIEXPORT void JNICALL Java_cn_smartpeak_tools_Log_SetTag(JNIEnv *env, jclass se
     (*env).ReleaseStringUTFChars(content, cContent);
 }
 
-JNIEXPORT void JNICALL Java_cn_smartpeak_tools_Log_Info(JNIEnv *env, jclass self, jstring content)
+JNIEXPORT void JNICALL Java_cn_smartpeak_tools_SmartLog_Info(JNIEnv *env, jclass self, jstring content)
 {
     const Jchar *cContent = nullptr;
 
@@ -40,7 +40,7 @@ JNIEXPORT void JNICALL Java_cn_smartpeak_tools_Log_Info(JNIEnv *env, jclass self
     (*env).ReleaseStringUTFChars(content, cContent);
 }
 
-JNIEXPORT void JNICALL Java_cn_smartpeak_tools_Log_Debug(JNIEnv *env, jclass self, jstring content)
+JNIEXPORT void JNICALL Java_cn_smartpeak_tools_SmartLog_Debug(JNIEnv *env, jclass self, jstring content)
 {
     const Jchar *cContent = nullptr;
 
@@ -53,7 +53,7 @@ JNIEXPORT void JNICALL Java_cn_smartpeak_tools_Log_Debug(JNIEnv *env, jclass sel
     (*env).ReleaseStringUTFChars(content, cContent);
 }
 
-JNIEXPORT void JNICALL Java_cn_smartpeak_tools_Log_Error(JNIEnv *env, jclass self, jstring content)
+JNIEXPORT void JNICALL Java_cn_smartpeak_tools_SmartLog_Error(JNIEnv *env, jclass self, jstring content)
 {
     const Jchar *cContent = nullptr;
 

@@ -11,12 +11,12 @@ extern "C"
 {
 #endif
 
-JNIEXPORT jint JNICALL Java_cn_smartpeak_tools_Sensor_GetState(JNIEnv *env, jobject self)
+JNIEXPORT jint JNICALL Java_cn_smartpeak_tools_SmartSensor_GetState(JNIEnv *env, jobject self)
 {
     return static_cast<Jint>(Sensor::Instance().GetSensorState());
 }
 
-JNIEXPORT jint JNICALL Java_cn_smartpeak_tools_Sensor_GetTamperedRoute(JNIEnv *env, jobject self)
+JNIEXPORT jint JNICALL Java_cn_smartpeak_tools_SmartSensor_GetTamperedRoute(JNIEnv *env, jobject self)
 {
     return static_cast<Jint>(Sensor::Instance().GetSensorTamperedRoute());
 }

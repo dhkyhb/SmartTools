@@ -14,7 +14,7 @@ extern "C"
 {
 #endif
 
-JNIEXPORT jstring JNICALL Java_cn_smartpeak_tools_Config_GetRemoteActivationAddress(JNIEnv *env, jobject self)
+JNIEXPORT jstring JNICALL Java_cn_smartpeak_tools_SmartConfig_GetRemoteActivationAddress(JNIEnv *env, jobject self)
 {
     if (env == nullptr)
         return nullptr;
@@ -22,7 +22,7 @@ JNIEXPORT jstring JNICALL Java_cn_smartpeak_tools_Config_GetRemoteActivationAddr
     return (*env).NewStringUTF(Config::Instance().GetRemoteActivationAddress());
 }
 
-JNIEXPORT jint JNICALL Java_cn_smartpeak_tools_Config_GetRemoteActivationPort(JNIEnv *env, jobject self)
+JNIEXPORT jint JNICALL Java_cn_smartpeak_tools_SmartConfig_GetRemoteActivationPort(JNIEnv *env, jobject self)
 {
     if (env == nullptr)
         return 0;
@@ -30,7 +30,7 @@ JNIEXPORT jint JNICALL Java_cn_smartpeak_tools_Config_GetRemoteActivationPort(JN
     return Config::Instance().GetRemoteActivationPort();
 }
 
-JNIEXPORT jint JNICALL Java_cn_smartpeak_tools_Config_GetRemoteActivationTimeouts(JNIEnv *env, jobject self)
+JNIEXPORT jint JNICALL Java_cn_smartpeak_tools_SmartConfig_GetRemoteActivationTimeouts(JNIEnv *env, jobject self)
 {
     if (env == nullptr)
         return 0;
@@ -38,7 +38,7 @@ JNIEXPORT jint JNICALL Java_cn_smartpeak_tools_Config_GetRemoteActivationTimeout
     return Config::Instance().GetRemoteActivationTimeouts();
 }
 
-JNIEXPORT jstring JNICALL Java_cn_smartpeak_tools_Config_GetCustomerCheckAddress(JNIEnv *env, jobject self)
+JNIEXPORT jstring JNICALL Java_cn_smartpeak_tools_SmartConfig_GetCustomerCheckAddress(JNIEnv *env, jobject self)
 {
     if (env == nullptr)
         return nullptr;
@@ -46,7 +46,7 @@ JNIEXPORT jstring JNICALL Java_cn_smartpeak_tools_Config_GetCustomerCheckAddress
     return env->NewStringUTF(Config::Instance().GetCustomerCheckAddress());
 }
 
-JNIEXPORT jint JNICALL Java_cn_smartpeak_tools_Config_GetCustomerCheckPort(JNIEnv *env, jobject self)
+JNIEXPORT jint JNICALL Java_cn_smartpeak_tools_SmartConfig_GetCustomerCheckPort(JNIEnv *env, jobject self)
 {
     if (env == nullptr)
         return 0;
@@ -54,7 +54,7 @@ JNIEXPORT jint JNICALL Java_cn_smartpeak_tools_Config_GetCustomerCheckPort(JNIEn
     return Config::Instance().GetCustomerCheckPort();
 }
 
-JNIEXPORT jint JNICALL Java_cn_smartpeak_tools_Config_GetCustomerCheckTimeouts(JNIEnv *env, jobject self)
+JNIEXPORT jint JNICALL Java_cn_smartpeak_tools_SmartConfig_GetCustomerCheckTimeouts(JNIEnv *env, jobject self)
 {
     if (env == nullptr)
         return 0;
@@ -62,7 +62,7 @@ JNIEXPORT jint JNICALL Java_cn_smartpeak_tools_Config_GetCustomerCheckTimeouts(J
     return Config::Instance().GetCustomerCheckTimeouts();
 }
 
-JNIEXPORT jint JNICALL Java_cn_smartpeak_tools_Config_GetModel(JNIEnv *env, jobject self)
+JNIEXPORT jint JNICALL Java_cn_smartpeak_tools_SmartConfig_GetModel(JNIEnv *env, jobject self)
 {
     if (env == nullptr)
         return 0;
@@ -70,7 +70,7 @@ JNIEXPORT jint JNICALL Java_cn_smartpeak_tools_Config_GetModel(JNIEnv *env, jobj
     return Config::Instance().GetModel();
 }
 
-JNIEXPORT jboolean JNICALL Java_cn_smartpeak_tools_Config_GetWhetherToOpenAudio(JNIEnv *env, jobject self)
+JNIEXPORT jboolean JNICALL Java_cn_smartpeak_tools_SmartConfig_GetWhetherToOpenAudio(JNIEnv *env, jobject self)
 {
     if (env == nullptr)
         return false;
@@ -78,7 +78,7 @@ JNIEXPORT jboolean JNICALL Java_cn_smartpeak_tools_Config_GetWhetherToOpenAudio(
     return Config::Instance().GetWhetherToOpenAudio();
 }
 
-JNIEXPORT jboolean JNICALL Java_cn_smartpeak_tools_Config_GetWhetherToOpenSignVerify(JNIEnv *env, jobject self)
+JNIEXPORT jboolean JNICALL Java_cn_smartpeak_tools_SmartConfig_GetWhetherToOpenSignVerify(JNIEnv *env, jobject self)
 {
     if (env == nullptr)
         return false;
@@ -86,7 +86,7 @@ JNIEXPORT jboolean JNICALL Java_cn_smartpeak_tools_Config_GetWhetherToOpenSignVe
     return Config::Instance().GetWhetherToOpenSignVerify();
 }
 
-JNIEXPORT jboolean JNICALL Java_cn_smartpeak_tools_Config_GetWhetherToOpenDeviceTampered(JNIEnv *env, jobject self)
+JNIEXPORT jboolean JNICALL Java_cn_smartpeak_tools_SmartConfig_GetWhetherToOpenDeviceTampered(JNIEnv *env, jobject self)
 {
     if (env == nullptr)
         return false;
@@ -94,7 +94,7 @@ JNIEXPORT jboolean JNICALL Java_cn_smartpeak_tools_Config_GetWhetherToOpenDevice
     return Config::Instance().GetWhetherToOpenDeviceTampered();
 }
 
-JNIEXPORT jboolean JNICALL Java_cn_smartpeak_tools_Config_GetWhetherTheDeviceOnStartUpToBeCheckSensor(
+JNIEXPORT jboolean JNICALL Java_cn_smartpeak_tools_SmartConfig_GetWhetherTheDeviceOnStartUpToBeCheckSensor(
     JNIEnv *env,
     jobject self
 )
@@ -105,7 +105,7 @@ JNIEXPORT jboolean JNICALL Java_cn_smartpeak_tools_Config_GetWhetherTheDeviceOnS
     return Config::Instance().GetWhetherTheDeviceOnStartUpToBeCheckSensor();
 }
 
-JNIEXPORT jboolean JNICALL Java_cn_smartpeak_tools_Config_GetWhetherToOpenCustomerCheck(JNIEnv *env, jobject self)
+JNIEXPORT jboolean JNICALL Java_cn_smartpeak_tools_SmartConfig_GetWhetherToOpenCustomerCheck(JNIEnv *env, jobject self)
 {
     if (env == nullptr)
         return false;
@@ -113,7 +113,7 @@ JNIEXPORT jboolean JNICALL Java_cn_smartpeak_tools_Config_GetWhetherToOpenCustom
     return Config::Instance().GetWhetherToOpenCustomerCheck();
 }
 
-JNIEXPORT jstring JNICALL Java_cn_smartpeak_tools_Config_GetVersion(JNIEnv *env, jobject self)
+JNIEXPORT jstring JNICALL Java_cn_smartpeak_tools_SmartConfig_GetVersion(JNIEnv *env, jobject self)
 {
     if (env == nullptr)
         return nullptr;

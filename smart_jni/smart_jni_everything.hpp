@@ -43,7 +43,7 @@ typedef struct JniEverything
 
 static JniEverything *JniEverythingCall = nullptr;
 
-JNIEXPORT void JNICALL Java_cn_smartpeak_tools_Everything_Listen(JNIEnv *env, jobject self, jobject javaCall)
+JNIEXPORT void JNICALL Java_cn_smartpeak_tools_SmartEverything_Listen(JNIEnv *env, jobject self, jobject javaCall)
 {
     constexpr static Jchar JNI_EVERYTHING_CALLBACK_EXECUTE_METHOD_PARAMETER[] = "(I)V";
     constexpr static Jchar JNI_EVERYTHING_CALLBACK_PROCESS_METHOD_PARAMETER[] = "(I)V";
@@ -77,7 +77,7 @@ JNIEXPORT void JNICALL Java_cn_smartpeak_tools_Everything_Listen(JNIEnv *env, jo
                 auto &jni = *reinterpret_cast<JniEverything *>(p);
 
                 Log::Instance().Print<LogType::INFO>("initialization everything listener");
-                if (jni.javaVm->AttachCurrentThread(&jni.env, nullptr) != JNI_OK)
+                if ((*jni.javaVm).AttachCurrentThread(&jni.env, nullptr) != JNI_OK)
                     return;
                 if (jni.callClass = (*jni.env).GetObjectClass(jni.callObject);jni.callClass == nullptr)
                     return;
@@ -129,7 +129,7 @@ JNIEXPORT void JNICALL Java_cn_smartpeak_tools_Everything_Listen(JNIEnv *env, jo
     (*JniEverythingCall).jniLock.unlock();
 }
 
-JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_Everything_SendThing(JNIEnv *env, jobject self, jint type)
+JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEverything_SendThing(JNIEnv *env, jobject self, jint type)
 {
     if (env == nullptr)
         return self;

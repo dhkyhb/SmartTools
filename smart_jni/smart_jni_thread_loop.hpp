@@ -37,7 +37,7 @@ static JniAttr *JniAttrList = nullptr;
 constexpr Jchar JNI_THREAD_LOOP_CALLBACK_METHOD_NAME[] = "OnProcess";
 constexpr Jchar JNI_THREAD_LOOP_CALLBACK_METHOD_PARAMETER[] = "(I)V";
 
-JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_ThreadLoop_Insert(JNIEnv *env, jobject self, jobject method)
+JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartThreadLoop_Insert(JNIEnv *env, jobject self, jobject method)
 {
     if ((JniAttrList == nullptr) || ((*JniAttrList).javaVm == nullptr))
         return self;
@@ -80,7 +80,7 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_ThreadLoop_Insert(JNIEnv *env,
     return self;
 }
 
-JNIEXPORT void JNICALL Java_cn_smartpeak_tools_ThreadLoop_Run(JNIEnv *env, jobject self)
+JNIEXPORT void JNICALL Java_cn_smartpeak_tools_SmartThreadLoop_Run(JNIEnv *env, jobject self)
 {
     if ((env == nullptr) || (JniAttrList == nullptr))
         return;

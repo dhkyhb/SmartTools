@@ -111,24 +111,20 @@ public:
     {
         Jbool state = false;
 
-        if (!this->POSInit())
-        {
-            Errors::Instance().SetErrorType<ErrorsType::POS_NEED_SHORT_SMALL_BATTERY>();
-            return state;
-        }
-
         do
         {
-            if (!this->TamperedLogReader())
-            {
-                Errors::Instance().SetErrorType<ErrorsType::POS_NEED_REBOOT>();
+            if (!this->POSInit())
                 break;
-            }
+            if (!this->TamperedLogReader())
+                break;
             if (!this->TamperedLogParse())
                 break;
 
             state = true;
         } while (false);
+
+        if(!state)
+            Errors::Instance().SetErrorType<ErrorsType::POS_NEED_SHORT_SMALL_BATTERY_OR_REBOOT>();
 
         this->POSRelease();
         return state;
