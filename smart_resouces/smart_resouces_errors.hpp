@@ -8,6 +8,8 @@ enum class ErrorsType
 {
     SUCCESS = 0,
 
+    CONFIG_INVALID,
+
     SERVER_REQUEST_TIMEOUTS,
     SERVER_REQUEST_FAIL,
 

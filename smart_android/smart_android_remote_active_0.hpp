@@ -23,7 +23,6 @@ using smart::utils::log::LogType;
 using smart::utils::math::Math;
 using smart::resouces::errors::Errors;
 using smart::resouces::errors::ErrorsType;
-using smart::android::config::Config;
 
 constexpr Jint REMOTEACTIVE0_DAM_DATA_AREA_SN_SIZE = 32;
 constexpr Jint REMOTEACTIVE0_DAM_DATA_AREA_CODE_SIZE = 1024;
@@ -71,6 +70,14 @@ typedef struct
 
 typedef struct
 {
+
+    Jint timeouts;
+    Jint port;
+    const Jchar *address;
+} RemoteActive0Attr;
+
+typedef struct
+{
     Jint activeCodeLen;
     Jchar *activeCode;
     APosSecurityManager *context;
@@ -96,6 +103,12 @@ public:
     Jbool ApplyUnlock()
     {
         Jbool state = false;
+
+        if (!this->Check())
+        {
+            Errors::Instance().SetErrorType<ErrorsType::CONFIG_INVALID>();
+            return false;
+        }
 
         do
         {
@@ -152,16 +165,41 @@ public:
         return (*this);
     }
 
+    RemoteActive0 &SetAddress(const Jchar *v)
+    {
+        this->mRemoteActive0Attr.address = v;
+        return (*this);
+    }
+
+    RemoteActive0 &SetPort(Jint v)
+    {
+        this->mRemoteActive0Attr.port = v;
+        return (*this);
+    }
+
+    RemoteActive0 &SetTimeouts(Jint v)
+    {
+        this->mRemoteActive0Attr.timeouts = v;
+        return (*this);
+    }
+
 private:
     POSSDKSupport mPOSSDKSupport;
     RemoteActive0DAM mRemoteActive0DAM;
     RemoteActive0Client mRemoteActive0Client;
+    RemoteActive0Attr mRemoteActive0Attr;
 
     RemoteActive0() :
         mPOSSDKSupport{},
         mRemoteActive0DAM{},
-        mRemoteActive0Client{}
+        mRemoteActive0Client{},
+        mRemoteActive0Attr{}
     {}
+
+    Jbool Check()
+    {
+        return (this->mRemoteActive0Attr.address != nullptr);
+    }
 
     Jbool POSInit()
     {
@@ -185,7 +223,7 @@ private:
     {
         Jint i = 0;
 
-        auto &&hostT = gethostbyname(Config::Instance().GetRemoteActivationAddress());
+        auto &&hostT = gethostbyname(this->mRemoteActive0Attr.address);
         if (hostT == nullptr)
             return false;
 
@@ -203,7 +241,7 @@ private:
 
         this->mRemoteActive0Client.socket = socket(AF_INET, SOCK_STREAM, 0);
         this->mRemoteActive0Client.sockaddrIn.sin_family = AF_INET;
-        this->mRemoteActive0Client.sockaddrIn.sin_port = htons(Config::Instance().GetRemoteActivationPort());
+        this->mRemoteActive0Client.sockaddrIn.sin_port = htons(this->mRemoteActive0Attr.port);
         this->mRemoteActive0Client.sockaddrIn.sin_addr = *reinterpret_cast<in_addr *>((*hostT).h_addr_list[0]);
 
         if (connect(
@@ -213,8 +251,8 @@ private:
         ) == -1)
             return false;
 
-        this->mRemoteActive0Client.readCountTimes.tv_sec = Config::Instance().GetRemoteActivationTimeouts();
-        this->mRemoteActive0Client.writeCountTimes.tv_sec = Config::Instance().GetRemoteActivationTimeouts();
+        this->mRemoteActive0Client.readCountTimes.tv_sec = this->mRemoteActive0Attr.timeouts;
+        this->mRemoteActive0Client.writeCountTimes.tv_sec = this->mRemoteActive0Attr.timeouts;
 
         if (setsockopt(
             this->mRemoteActive0Client.socket,
@@ -303,7 +341,7 @@ private:
             );ret != 0)
             return false;
 
-        Log::Instance().Print<LogType::DEBUG>("apply activation code ret: %d",ret);
+        Log::Instance().Print<LogType::DEBUG>("apply activation code ret: %d", ret);
         if (this->mPOSSDKSupport.activeCode == nullptr)
             return false;
         if (this->mPOSSDKSupport.activeCodeLen > static_cast<Jint>(

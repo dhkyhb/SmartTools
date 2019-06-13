@@ -19,7 +19,11 @@ extern "C"
 {
 #endif
 
-JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetAsset(JNIEnv *env, jobject self, jobject assetContex)
+JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetAsset(
+    JNIEnv *env,
+    jobject self,
+    jobject assetContex
+)
 {
     constexpr Jint CONFIG_READ_CACHE_SIZE = 200;
     constexpr Jchar CONFIG_SYSTEM_DEFAULT_PATH[] = "/system/etc/app/cn.basewin.security.defense.system.xml";
@@ -60,28 +64,28 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetAsset(JNIE
             break;
 
         if (asset = AAssetManager_open(
-                    assetManager,
-                    CONFIG_APP_DEFAULT_PATH,
-                    AASSET_MODE_UNKNOWN
+                assetManager,
+                CONFIG_APP_DEFAULT_PATH,
+                AASSET_MODE_UNKNOWN
             );asset == nullptr)
             break;
 
         Config::Instance().WriteBuffer(
-                reinterpret_cast<Jchar *>(const_cast<void *>(AAsset_getBuffer(asset))),
-                AAsset_getLength(asset)
+            reinterpret_cast<Jchar *>(const_cast<void *>(AAsset_getBuffer(asset))),
+            AAsset_getLength(asset)
         );
 
         AAsset_close(asset);
 
         if (asset = AAssetManager_open(
-                    assetManager,
-                    CONFIG_APP_DEFAULT_CA_CERT_PATH,
-                    AASSET_MODE_UNKNOWN
+                assetManager,
+                CONFIG_APP_DEFAULT_CA_CERT_PATH,
+                AASSET_MODE_UNKNOWN
             );asset == nullptr)
             break;
 
         Environment::Instance().SetCustomerCheckCert(
-                reinterpret_cast<Jchar *>(const_cast<void *>(AAsset_getBuffer(asset)))
+            reinterpret_cast<Jchar *>(const_cast<void *>(AAsset_getBuffer(asset)))
         );
     } while (false);
 
@@ -113,7 +117,8 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetSN(JNIEnv 
     return self;
 }
 
-JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetThreadLoopSize(JNIEnv *env, jobject self, jint size)
+JNIEXPORT jobject JNICALL
+Java_cn_smartpeak_tools_SmartEnvironment_SetThreadLoopSize(JNIEnv *env, jobject self, jint size)
 {
     if ((env == nullptr) || (size < 1))
         return self;
@@ -122,7 +127,8 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetThreadLoop
     return self;
 }
 
-JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetDeviceModel(JNIEnv *env, jobject self, jstring model)
+JNIEXPORT jobject JNICALL
+Java_cn_smartpeak_tools_SmartEnvironment_SetDeviceModel(JNIEnv *env, jobject self, jstring model)
 {
     const Jchar *cModel = nullptr;
 
@@ -137,9 +143,9 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetDeviceMode
 }
 
 JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetOldCustomer(
-        JNIEnv *env,
-        jobject self,
-        jstring oldCustomer
+    JNIEnv *env,
+    jobject self,
+    jstring oldCustomer
 )
 {
     const Jchar *cOldCustomer = nullptr;
@@ -155,9 +161,9 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetOldCustome
 }
 
 JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetOldSubCustomer(
-        JNIEnv *env,
-        jobject self,
-        jstring oldSubCustomer
+    JNIEnv *env,
+    jobject self,
+    jstring oldSubCustomer
 )
 {
     const Jchar *cOldSubCustomer = nullptr;
@@ -173,9 +179,9 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetOldSubCust
 }
 
 JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetAndroidVersion(
-        JNIEnv *env,
-        jobject self,
-        jstring androidVersion
+    JNIEnv *env,
+    jobject self,
+    jstring androidVersion
 )
 {
     const Jchar *cAndroidVersion = nullptr;
@@ -191,9 +197,9 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetAndroidVer
 }
 
 JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetAndroidSDKVersion(
-        JNIEnv *env,
-        jobject self,
-        jstring androidSDKVersion
+    JNIEnv *env,
+    jobject self,
+    jstring androidSDKVersion
 )
 {
     const Jchar *cAndroidSDKVersion = nullptr;
@@ -209,9 +215,9 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetAndroidSDK
 }
 
 JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetAndroidID(
-        JNIEnv *env,
-        jobject self,
-        jstring androidID
+    JNIEnv *env,
+    jobject self,
+    jstring androidID
 )
 {
     const Jchar *cAndroidID = nullptr;
@@ -227,9 +233,9 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetAndroidID(
 }
 
 JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetAndroidDevice(
-        JNIEnv *env,
-        jobject self,
-        jstring androidDevice
+    JNIEnv *env,
+    jobject self,
+    jstring androidDevice
 )
 {
     const Jchar *cAndroidDevice = nullptr;
@@ -245,9 +251,9 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetAndroidDev
 }
 
 JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetAndroidBootloader(
-        JNIEnv *env,
-        jobject self,
-        jstring androidBootloader
+    JNIEnv *env,
+    jobject self,
+    jstring androidBootloader
 )
 {
     const Jchar *cAndroidBootloader = nullptr;

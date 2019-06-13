@@ -21,11 +21,9 @@ using smart::utils::simple::http::Http;
 using smart::utils::simple::http::HttpMethod;
 using smart::resouces::errors::Errors;
 using smart::resouces::errors::ErrorsType;
-using smart::android::config::Config;
 
 constexpr Jint REMOTE_ACTIVE1_AREA_CODE_SIZE = 2048;
 constexpr Jint REMOTE_ACTIVE1_CLIENT_BUF_SIZE = 4096;
-
 
 enum class RemoteActive1Procedure
 {
@@ -42,6 +40,10 @@ typedef struct
     const Jchar *subCustomer;
     const Jchar *hardwareVersion;
     const Jchar *softwareVersion;
+
+    Jint timeouts;
+    Jint port;
+    const Jchar *address;
 
     Jchar code[REMOTE_ACTIVE1_AREA_CODE_SIZE];
     Jbyte codeArray[REMOTE_ACTIVE1_AREA_CODE_SIZE];
@@ -115,7 +117,10 @@ public:
         Jbool state = false;
 
         if (!this->Check())
+        {
+            Errors::Instance().SetErrorType<ErrorsType::CONFIG_INVALID>();
             return false;
+        }
 
         do
         {
@@ -180,6 +185,24 @@ public:
         return (*this);
     }
 
+    RemoteActive1 &SetAddress(const Jchar *v)
+    {
+        this->mRemoteActive1Area.address = v;
+        return (*this);
+    }
+
+    RemoteActive1 &SetPort(Jint v)
+    {
+        this->mRemoteActive1Area.port = v;
+        return (*this);
+    }
+
+    RemoteActive1 &SetTimeouts(Jint v)
+    {
+        this->mRemoteActive1Area.timeouts = v;
+        return (*this);
+    }
+
 private:
     POSSupport mPOSSupport;
     RemoteActive1Area mRemoteActive1Area;
@@ -198,7 +221,8 @@ private:
                 && (this->mRemoteActive1Area.customer != nullptr)
                 && (this->mRemoteActive1Area.subCustomer != nullptr)
                 && (this->mRemoteActive1Area.hardwareVersion != nullptr)
-                && (this->mRemoteActive1Area.softwareVersion != nullptr));
+                && (this->mRemoteActive1Area.softwareVersion != nullptr)
+                && (this->mRemoteActive1Area.address != nullptr));
     }
 
     Jbool POSInit()
@@ -227,7 +251,7 @@ private:
         if (!this->Unlock<RemoteActive1Procedure::REGISTER>())
             return state;
 
-        while (times < Config::Instance().GetRemoteActivationTimeouts())
+        while (times < this->mRemoteActive1Area.timeouts)
         {
             state = this->Unlock<RemoteActive1Procedure::CHECK>();
             if (state)
@@ -260,7 +284,7 @@ private:
 
         this->mRemoteActive1Client.http.Init()
             .SetMethod(HttpMethod::GET)
-            .SetHost(Config::Instance().GetRemoteActivationAddress())
+            .SetHost(this->mRemoteActive1Area.address)
             .SetTarget(this->mRemoteActive1Client.target);
 
         auto &&httpContent = this->mRemoteActive1Client.http.Marshal();
@@ -302,7 +326,7 @@ private:
     {
         Jint i = 0;
 
-        auto &&hostT = gethostbyname(Config::Instance().GetRemoteActivationAddress());
+        auto &&hostT = gethostbyname(this->mRemoteActive1Area.address);
         if (hostT == nullptr)
             return false;
 
@@ -320,7 +344,7 @@ private:
 
         this->mRemoteActive1Client.socket = socket(AF_INET, SOCK_STREAM, 0);
         this->mRemoteActive1Client.sockaddrIn.sin_family = AF_INET;
-        this->mRemoteActive1Client.sockaddrIn.sin_port = htons(Config::Instance().GetRemoteActivationPort());
+        this->mRemoteActive1Client.sockaddrIn.sin_port = htons(this->mRemoteActive1Area.port);
         this->mRemoteActive1Client.sockaddrIn.sin_addr = *reinterpret_cast<in_addr *>((*hostT).h_addr_list[0]);
 
         if (connect(

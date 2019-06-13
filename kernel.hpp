@@ -9,7 +9,7 @@
 
 #include <stdint.h>
 
-using Jsize = uint32_t;
+using Jsize = size_t;
 using Jbool = bool;
 using Jbyte = uint8_t;
 using Juint = uint32_t;

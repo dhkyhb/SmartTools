@@ -20,10 +20,10 @@ constexpr Jint SP_TAMPERED_LOG_RECORD_MAX_SIZE = 32;
 
 enum class SPTamperedLogType
 {
-    SENSOR_ONE = 1,
-    SENSOR_TWO,
-    SENSOR_THREE,
-    SENSOR_FOUR,
+    SENSOR_ONE = 2,
+    SENSOR_TWO = 4,
+    SENSOR_THREE = 8,
+    SENSOR_FOUR = 16,
 
     OTHER_FORMAT_PED = 0,
     OTHER_UNLOCK_PED,
@@ -123,7 +123,7 @@ public:
             state = true;
         } while (false);
 
-        if(!state)
+        if (!state)
             Errors::Instance().SetErrorType<ErrorsType::POS_NEED_SHORT_SMALL_BATTERY_OR_REBOOT>();
 
         this->POSRelease();
@@ -145,8 +145,8 @@ private:
     SPTamperedLogPOSSupport mSPTamperedLogPOSSupport;
 
     SPTamperedLog() :
-            mSPTamperedLogAttr{},
-            mSPTamperedLogPOSSupport{}
+        mSPTamperedLogAttr{},
+        mSPTamperedLogPOSSupport{}
     {}
 
     Jbool POSInit()
@@ -170,11 +170,11 @@ private:
     Jbool TamperedLogReader()
     {
         auto &&ret = APosAccessoryManager_getAttackedLogs(
-                this->mSPTamperedLogPOSSupport.context,
-                nullptr,
-                0,
-                &this->mSPTamperedLogPOSSupport.log,
-                &this->mSPTamperedLogPOSSupport.logLen
+            this->mSPTamperedLogPOSSupport.context,
+            nullptr,
+            0,
+            &this->mSPTamperedLogPOSSupport.log,
+            &this->mSPTamperedLogPOSSupport.logLen
         );
 
         Log::Instance().Print<LogType::DEBUG>("APosAccessoryManager_getAttackedLogs ret: %d", ret);
@@ -184,13 +184,13 @@ private:
         Log::Instance().Print<LogType::DEBUG>("obtained binary tampered data:");
         memset(this->mSPTamperedLogAttr.command, 0, sizeof(this->mSPTamperedLogAttr.command));
         memcpy(
-                this->mSPTamperedLogAttr.command,
-                this->mSPTamperedLogPOSSupport.log,
-                this->mSPTamperedLogPOSSupport.logLen
+            this->mSPTamperedLogAttr.command,
+            this->mSPTamperedLogPOSSupport.log,
+            this->mSPTamperedLogPOSSupport.logLen
         );
         Log::Instance().PrintHex(
-                reinterpret_cast<Jbyte *>(this->mSPTamperedLogPOSSupport.log),
-                this->mSPTamperedLogPOSSupport.logLen
+            reinterpret_cast<Jbyte *>(this->mSPTamperedLogPOSSupport.log),
+            this->mSPTamperedLogPOSSupport.logLen
         );
         return (ret == 0);
     }
@@ -206,8 +206,8 @@ private:
             return false;
 
         if (this->mSPTamperedLogAttr.commandLen = Strings::LittleHex2Int32(
-                    &this->mSPTamperedLogAttr.command[++this->mSPTamperedLogAttr.commandStep],
-                    SP_TAMPERED_LOG_COMMAND_VALUE_LENGTH
+                &this->mSPTamperedLogAttr.command[++this->mSPTamperedLogAttr.commandStep],
+                SP_TAMPERED_LOG_COMMAND_VALUE_LENGTH
             );this->mSPTamperedLogAttr.commandLen < 1)
             return false;
 
@@ -219,22 +219,22 @@ private:
             this->HexTimeConvToFormatStringTimeAndCategoryAndType();
 
             Strings::Bytes2String(
-                    &this->mSPTamperedLogAttr.command[this->mSPTamperedLogAttr.commandStep - 8],
-                    4,
-                    this->mSPTamperedLogAttr.tmpCategoryStr,
-                    sizeof(this->mSPTamperedLogAttr.tmpCategoryStr)
+                &this->mSPTamperedLogAttr.command[this->mSPTamperedLogAttr.commandStep - 8],
+                4,
+                this->mSPTamperedLogAttr.tmpCategoryStr,
+                sizeof(this->mSPTamperedLogAttr.tmpCategoryStr)
             );
             Strings::Bytes2String(
-                    &this->mSPTamperedLogAttr.command[this->mSPTamperedLogAttr.commandStep - 4],
-                    4,
-                    this->mSPTamperedLogAttr.tmpTypeStr,
-                    sizeof(this->mSPTamperedLogAttr.tmpTypeStr)
+                &this->mSPTamperedLogAttr.command[this->mSPTamperedLogAttr.commandStep - 4],
+                4,
+                this->mSPTamperedLogAttr.tmpTypeStr,
+                sizeof(this->mSPTamperedLogAttr.tmpTypeStr)
             );
             Log::Instance().Print<LogType::DEBUG>(
-                    "%s | %s | %s",
-                    this->mSPTamperedLogAttr.records[j].time,
-                    this->mSPTamperedLogAttr.tmpCategoryStr,
-                    this->mSPTamperedLogAttr.tmpTypeStr
+                "%s | %s | %s",
+                this->mSPTamperedLogAttr.records[j].time,
+                this->mSPTamperedLogAttr.tmpCategoryStr,
+                this->mSPTamperedLogAttr.tmpTypeStr
             );
 
             ++j;
@@ -253,10 +253,10 @@ private:
         for (i = 0; i < 6; ++i)
         {
             Strings::Bytes2String(
-                    &this->mSPTamperedLogAttr.command[this->mSPTamperedLogAttr.commandStep],
-                    1,
-                    &this->mSPTamperedLogAttr.records[this->mSPTamperedLogAttr.recordLen].time[mark],
-                    (sizeof(this->mSPTamperedLogAttr.records[this->mSPTamperedLogAttr.recordLen].time) - mark)
+                &this->mSPTamperedLogAttr.command[this->mSPTamperedLogAttr.commandStep],
+                1,
+                &this->mSPTamperedLogAttr.records[this->mSPTamperedLogAttr.recordLen].time[mark],
+                (sizeof(this->mSPTamperedLogAttr.records[this->mSPTamperedLogAttr.recordLen].time) - mark)
             );
 
             mark += 2;
@@ -278,7 +278,7 @@ private:
         ++this->mSPTamperedLogAttr.commandStep;
 
         this->mSPTamperedLogAttr.records[this->mSPTamperedLogAttr.recordLen].category =
-                static_cast<SPTamperedLogCategory>(i);
+            static_cast<SPTamperedLogCategory>(i);
 
         if (static_cast<SPTamperedLogCategory>(i) != SPTamperedLogCategory::SENSOR)
         {
@@ -298,16 +298,16 @@ private:
             this->mSPTamperedLogAttr.records[this->mSPTamperedLogAttr.recordLen].type = 0;
             if ((i & SENSOR_ROUTE_CODE_ONE_VALUE) == SENSOR_ROUTE_CODE_ONE_VALUE)
                 this->mSPTamperedLogAttr.records[this->mSPTamperedLogAttr.recordLen].type |=
-                        static_cast<Juint>(SPTamperedLogType::SENSOR_ONE);
+                    static_cast<Juint>(SPTamperedLogType::SENSOR_ONE);
             if ((i & SENSOR_ROUTE_CODE_TWO_VALUE) == SENSOR_ROUTE_CODE_TWO_VALUE)
                 this->mSPTamperedLogAttr.records[this->mSPTamperedLogAttr.recordLen].type |=
-                        static_cast<Juint>(SPTamperedLogType::SENSOR_TWO);
+                    static_cast<Juint>(SPTamperedLogType::SENSOR_TWO);
             if ((i & SENSOR_ROUTE_CODE_TREE_VALUE) == SENSOR_ROUTE_CODE_TREE_VALUE)
                 this->mSPTamperedLogAttr.records[this->mSPTamperedLogAttr.recordLen].type |=
-                        static_cast<Juint>(SPTamperedLogType::SENSOR_THREE);
+                    static_cast<Juint>(SPTamperedLogType::SENSOR_THREE);
             if ((i & SENSOR_ROUTE_CODE_FOUR_VALUE) == SENSOR_ROUTE_CODE_FOUR_VALUE)
                 this->mSPTamperedLogAttr.records[this->mSPTamperedLogAttr.recordLen].type |=
-                        static_cast<Juint>(SPTamperedLogType::SENSOR_FOUR);
+                    static_cast<Juint>(SPTamperedLogType::SENSOR_FOUR);
         }
 
         ++this->mSPTamperedLogAttr.recordLen;

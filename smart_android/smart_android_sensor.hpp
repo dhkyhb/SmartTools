@@ -10,10 +10,10 @@ namespace smart::android::sensor
 
 enum class SensorRoute
 {
-    ONE = 1,
-    TWO,
-    THREE,
-    FOUR,
+    ONE = 2,
+    TWO = 4,
+    THREE = 8,
+    FOUR = 16,
 };
 
 enum class SensorState
