@@ -2,11 +2,17 @@
 #define SMARTTOOLS_SMART_ANDROID_SENSOR_HPP
 
 #include "../kernel.hpp"
+#include "../smart_resouces/smart_resouces_errors.hpp"
 
 #include <APosSecurityManager.h>
 
 namespace smart::android::sensor
 {
+
+using smart::resouces::errors::Errors;
+using smart::resouces::errors::ErrorsType;
+
+constexpr Jint SENSOR_SRC_BUF_SIZE = 64;
 
 enum class SensorRoute
 {
@@ -30,6 +36,9 @@ enum class SensorState
 
 typedef struct
 {
+    Jint srcSensorValueLen;
+    Jbyte srcSensorValue[SENSOR_SRC_BUF_SIZE];
+
     SensorState state;
     SensorRoute route;
 } SensorAttr;
@@ -84,6 +93,22 @@ public:
                 &this->mPOSSDKSupport.sensorArrayLen
             );
 
+            if (this->mPOSSDKSupport.sensorCheckState == -1)
+            {
+                Errors::Instance().SetErrorType<ErrorsType::POS_INVALID>();
+                break;
+            }
+
+            if ((this->mPOSSDKSupport.sensorArray == nullptr) || (this->mPOSSDKSupport.sensorArrayLen < 1))
+                break;
+
+            this->mSensorAttr.srcSensorValueLen = this->mPOSSDKSupport.sensorArrayLen;
+            memcpy(
+                this->mSensorAttr.srcSensorValue,
+                this->mPOSSDKSupport.sensorArray,
+                this->mSensorAttr.srcSensorValueLen
+            );
+
             activeCode = APosSecurityManager_SysActSecurityFun(
                 this->mPOSSDKSupport.context,
                 this->mPOSSDKSupport.sensorArray,
@@ -116,6 +141,13 @@ public:
                 &this->mPOSSDKSupport.sensorArrayLen
             );
 
+            this->mSensorAttr.srcSensorValueLen = this->mPOSSDKSupport.sensorArrayLen;
+            memcpy(
+                this->mSensorAttr.srcSensorValue,
+                this->mPOSSDKSupport.sensorArray,
+                this->mSensorAttr.srcSensorValueLen
+            );
+
             if (!this->DistinguishRoute())
                 break;
             if (!this->DistinguishResults())
@@ -136,6 +168,16 @@ public:
     SensorRoute GetSensorTamperedRoute()
     {
         return this->mSensorAttr.route;
+    }
+
+    const Jbyte *GetSourceSensorValue()
+    {
+        return this->mSensorAttr.srcSensorValue;
+    }
+
+    Jint GetSourceSensorValueLength()
+    {
+        return this->mSensorAttr.srcSensorValueLen;
     }
 
 private:

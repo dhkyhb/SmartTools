@@ -123,7 +123,7 @@ public:
             state = true;
         } while (false);
 
-        if (!state)
+        if ((!state) && (Errors::Instance().GetErrorType() != ErrorsType::POS_INVALID))
             Errors::Instance().SetErrorType<ErrorsType::POS_NEED_SHORT_SMALL_BATTERY_OR_REBOOT>();
 
         this->POSRelease();
@@ -176,6 +176,12 @@ private:
             &this->mSPTamperedLogPOSSupport.log,
             &this->mSPTamperedLogPOSSupport.logLen
         );
+
+        if (ret == -1)
+        {
+            Errors::Instance().SetErrorType<ErrorsType::POS_INVALID>();
+            return false;
+        }
 
         Log::Instance().Print<LogType::DEBUG>("APosAccessoryManager_getAttackedLogs ret: %d", ret);
         if ((this->mSPTamperedLogPOSSupport.log == nullptr) || (this->mSPTamperedLogPOSSupport.logLen < 1))

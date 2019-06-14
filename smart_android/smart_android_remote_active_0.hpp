@@ -119,10 +119,7 @@ public:
             }
 
             if (!this->GetActiveCodeBySP())
-            {
-                Errors::Instance().SetErrorType<ErrorsType::POS_ACTIVATED>();
                 break;
-            }
 
             if (!this->SocketInit())
             {
@@ -333,13 +330,22 @@ private:
     {
         Jint ret = 0;
 
-        if (ret = APosSecurityManager_SysRemoteUnlockReq(
-                this->mPOSSDKSupport.context,
-                REMOTEACTIVE0_APPLY_ACTIVE_CODE_BY_SP_OF_MODE,
-                &this->mPOSSDKSupport.activeCode,
-                &this->mPOSSDKSupport.activeCodeLen
-            );ret != 0)
+        ret = APosSecurityManager_SysRemoteUnlockReq(
+            this->mPOSSDKSupport.context,
+            REMOTEACTIVE0_APPLY_ACTIVE_CODE_BY_SP_OF_MODE,
+            &this->mPOSSDKSupport.activeCode,
+            &this->mPOSSDKSupport.activeCodeLen
+        );
+
+        if (ret == -1)
+        {
+            Errors::Instance().SetErrorType<ErrorsType::POS_INVALID>();
             return false;
+        } else if(ret != 0)
+        {
+            Errors::Instance().SetErrorType<ErrorsType::POS_NEED_SHORT_SMALL_BATTERY_OR_REBOOT>();
+            return false;
+        }
 
         Log::Instance().Print<LogType::DEBUG>("apply activation code ret: %d", ret);
         if (this->mPOSSDKSupport.activeCode == nullptr)

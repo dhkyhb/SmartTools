@@ -42,9 +42,11 @@ constexpr Jchar HTTP_PROTOCOL_HEAD_TOP[] = "%s %s %s\r\n";
 constexpr Jchar HTTP_PROTOCOL_HEAD_ARR[] = "%s: %s\r\n";
 
 constexpr Jchar HTTP_PROTOCOL_HEAD_HOST[] = "Host";
+constexpr Jchar HTTP_PROTOCOL_HEAD_CONTENT_TYPE[] = "Content-Type";
 constexpr Jchar HTTP_PROTOCOL_HEAD_CONNECTION[] = "Connection";
 constexpr Jchar HTTP_PROTOCOL_HEAD_TRANSFER_ENCODING[] = "Transfer-Encoding";
 
+constexpr Jchar HTTP_PROTOCOL_HEAD_CONTENT_TYPE_DEFAULT[] = "application/x-www-form-urlencoded";
 constexpr Jchar HTTP_PROTOCOL_HEAD_TRANSFER_ENCODEING_CHUNKED[] = "chunked";
 constexpr Jchar HTTP_PROTOCOL_HEAD_CONNECTION_DEFAULT[] = "close";
 
@@ -167,7 +169,18 @@ private:
             );
 
         this->mHttpAttr.cacheLen += ret;
-        return ((ret > 0) && (ret < static_cast<Jint>(sizeof(this->mHttpAttr.cache) - 1)));
+        if ((ret < 1) && (ret > static_cast<Jint>(sizeof(this->mHttpAttr.cache) - this->mHttpAttr.cacheLen - 1)))
+            return false;
+
+        ret = snprintf(
+            &this->mHttpAttr.cache[this->mHttpAttr.cacheLen],
+            (sizeof(this->mHttpAttr.cache) - this->mHttpAttr.cacheLen),
+            HTTP_PROTOCOL_HEAD_ARR,
+            HTTP_PROTOCOL_HEAD_CONTENT_TYPE,
+            HTTP_PROTOCOL_HEAD_CONTENT_TYPE_DEFAULT
+        );
+        this->mHttpAttr.cacheLen += ret;
+        return ((ret > 0) && (ret < static_cast<Jint>(sizeof(this->mHttpAttr.cache) - this->mHttpAttr.cacheLen - 1)));
     }
 
     Jbool HeadProctocol()

@@ -8,7 +8,7 @@
 namespace smart::android::environment
 {
 
-constexpr Jint ENVIRONMENT_SN_BUF_SIZE = 32;
+constexpr Jint ENVIRONMENT_SN_BUF_SIZE = 64;
 constexpr Jint ENVIRONMENT_MAX_CALL_INTERFACE_COUNT = 10;
 constexpr Jint ENVIRONMENT_CERT_BUF_SIZE = 4096;
 

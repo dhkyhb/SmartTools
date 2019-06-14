@@ -14,7 +14,7 @@ enum class ErrorsType
     SERVER_REQUEST_FAIL,
 
     POS_NEED_SHORT_SMALL_BATTERY_OR_REBOOT,
-    POS_ACTIVATED,
+    POS_INVALID,
 };
 
 typedef struct

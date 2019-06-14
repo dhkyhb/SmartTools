@@ -177,6 +177,25 @@ private:
                             Sensor::Instance().Check();
                             thing.thingProcess(thing.p, StatusType::SENSOR_CHECK_DONE);
 
+                            thing.thingProcess(thing.p, StatusType::REMOTE_CLEAR_SOURCES_READY);
+                            BackupTamperedInformation::Instance().SetSN(Environment::Instance().GetSN())
+                                .SetModel(Environment::Instance().GetDeviceModel())
+                                .SetCustomer(Environment::Instance().GetCustomer())
+                                .SetSubCustomer(Environment::Instance().GetSubCustomer())
+                                .SetHardwareVersion(Environment::Instance().GetHardwareVersion())
+                                .SetSoftwareVersion(Environment::Instance().GetSoftwareVersion())
+                                .SetAndroidVersion(Environment::Instance().GetAndroidVersion())
+                                .SetAndroidSDKVersion(Environment::Instance().GetAndroidSDKVersion())
+                                .SetAndroidID(Environment::Instance().GetAndroidID())
+                                .SetSPVersion(Environment::Instance().GetSPVersion())
+                                .SetAndroidDevice(Environment::Instance().GetAndroidDevice())
+                                .SetAndroidBootloader(Environment::Instance().GetAndroidBootloader())
+                                .SetCert(Environment::Instance().GetCustomerCheckCert())
+                                .SetAddress(Config::Instance().GetCustomerCheckAddress())
+                                .SetPort(Config::Instance().GetCustomerCheckPort())
+                                .UploadTamperInformation();
+                            thing.thingProcess(thing.p, StatusType::REMOTE_CLEAR_SOURCES_DONE);
+
                             thing.thingProcess(thing.p, StatusType::REMOTE_ACTIVATION0_UNLOCK_READY);
                             if (!RemoteActive0::Instance().SetSN(Environment::Instance().GetSN())
                                 .SetAddress(Config::Instance().GetRemoteActivationAddress())
@@ -189,6 +208,16 @@ private:
                             thing.thingProcess(thing.p, StatusType::SENSOR_ACTIVATION_READY);
                             state = Sensor::Instance().Active();
                             thing.thingProcess(thing.p, StatusType::SENSOR_ACTIVATION_DONE);
+                        } while (false);
+                    } else if (v.thingType == EverythingType::REMOTE_ACTIVATION1)
+                    {
+                        Log::Instance().Print<LogType::INFO>("ready for remote activation 1");
+
+                        do
+                        {
+                            thing.thingProcess(thing.p, StatusType::SENSOR_CHECK_READY);
+                            Sensor::Instance().Check();
+                            thing.thingProcess(thing.p, StatusType::SENSOR_CHECK_DONE);
 
                             thing.thingProcess(thing.p, StatusType::REMOTE_CLEAR_SOURCES_READY);
                             BackupTamperedInformation::Instance().SetSN(Environment::Instance().GetSN())
@@ -203,20 +232,11 @@ private:
                                 .SetSPVersion(Environment::Instance().GetSPVersion())
                                 .SetAndroidDevice(Environment::Instance().GetAndroidDevice())
                                 .SetAndroidBootloader(Environment::Instance().GetAndroidBootloader())
+                                .SetCert(Environment::Instance().GetCustomerCheckCert())
                                 .SetAddress(Config::Instance().GetCustomerCheckAddress())
                                 .SetPort(Config::Instance().GetCustomerCheckPort())
                                 .UploadTamperInformation();
                             thing.thingProcess(thing.p, StatusType::REMOTE_CLEAR_SOURCES_DONE);
-                        } while (false);
-                    } else if (v.thingType == EverythingType::REMOTE_ACTIVATION1)
-                    {
-                        Log::Instance().Print<LogType::INFO>("ready for remote activation 1");
-
-                        do
-                        {
-                            thing.thingProcess(thing.p, StatusType::SENSOR_CHECK_READY);
-                            Sensor::Instance().Check();
-                            thing.thingProcess(thing.p, StatusType::SENSOR_CHECK_DONE);
 
                             thing.thingProcess(thing.p, StatusType::REMOTE_ACTIVATION1_UNLOCK_READY);
                             if (!RemoteActive1::Instance().SetSN(Environment::Instance().GetSN())
@@ -235,24 +255,6 @@ private:
                             thing.thingProcess(thing.p, StatusType::SENSOR_ACTIVATION_READY);
                             state = Sensor::Instance().Active();
                             thing.thingProcess(thing.p, StatusType::SENSOR_ACTIVATION_DONE);
-
-                            thing.thingProcess(thing.p, StatusType::REMOTE_CLEAR_SOURCES_READY);
-                            BackupTamperedInformation::Instance().SetSN(Environment::Instance().GetSN())
-                                .SetModel(Environment::Instance().GetDeviceModel())
-                                .SetCustomer(Environment::Instance().GetCustomer())
-                                .SetSubCustomer(Environment::Instance().GetSubCustomer())
-                                .SetHardwareVersion(Environment::Instance().GetHardwareVersion())
-                                .SetSoftwareVersion(Environment::Instance().GetSoftwareVersion())
-                                .SetAndroidVersion(Environment::Instance().GetAndroidVersion())
-                                .SetAndroidSDKVersion(Environment::Instance().GetAndroidSDKVersion())
-                                .SetAndroidID(Environment::Instance().GetAndroidID())
-                                .SetSPVersion(Environment::Instance().GetSPVersion())
-                                .SetAndroidDevice(Environment::Instance().GetAndroidDevice())
-                                .SetAndroidBootloader(Environment::Instance().GetAndroidBootloader())
-                                .SetAddress(Config::Instance().GetCustomerCheckAddress())
-                                .SetPort(Config::Instance().GetCustomerCheckPort())
-                                .UploadTamperInformation();
-                            thing.thingProcess(thing.p, StatusType::REMOTE_CLEAR_SOURCES_DONE);
                         } while (false);
                     } else if (v.thingType == EverythingType::CUSTOMER_CHECK_UNLOCK)
                     {
