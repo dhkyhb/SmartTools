@@ -1,19 +1,16 @@
+#pragma once
+
 #ifndef SMARTTOOLS_SMART_ANDROID_REMOTE_ACTIVE_0_HPP
 #define SMARTTOOLS_SMART_ANDROID_REMOTE_ACTIVE_0_HPP
 
 #include "../kernel.hpp"
 #include "../smart_utils/smart_utils_log.hpp"
 #include "../smart_utils/smart_utils_math.hpp"
+#include "../smart_utils/smart_utils_socket_based_on_linux.hpp"
 #include "../smart_resouces/smart_resouces_errors.hpp"
 #include "../smart_android/smart_android_config.hpp"
 
 #include <APosSecurityManager.h>
-
-#include <fcntl.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <linux/in.h>
-#include <sys/socket.h>
 
 namespace smart::android::remote::active0
 {
@@ -21,6 +18,7 @@ namespace smart::android::remote::active0
 using smart::utils::log::Log;
 using smart::utils::log::LogType;
 using smart::utils::math::Math;
+using smart::utils::soket::linux::Socket;
 using smart::resouces::errors::Errors;
 using smart::resouces::errors::ErrorsType;
 
@@ -63,9 +61,7 @@ typedef struct
 {
     Jint socket;
 
-    sockaddr_in sockaddrIn;
-    timeval readCountTimes;
-    timeval writeCountTimes;
+    Socket socketObj;
 } RemoteActive0Client;
 
 typedef struct
@@ -218,66 +214,20 @@ private:
 
     Jbool SocketInit()
     {
-        Jint i = 0;
-
-        auto &&hostT = gethostbyname(this->mRemoteActive0Attr.address);
-        if (hostT == nullptr)
+        if(!this->mRemoteActive0Client.socketObj.SetAddress(this->mRemoteActive0Attr.address)
+            .SetPort(this->mRemoteActive0Attr.port)
+            .SetReadTimeoutsSecounds(this->mRemoteActive0Attr.timeouts)
+            .SetWriteTimeoutsSecounds(this->mRemoteActive0Attr.timeouts)
+            .Connect())
             return false;
 
-        while ((*hostT).h_addr_list[i] != nullptr)
-        {
-            Log::Instance().Print<LogType::DEBUG>(
-                "remote activation address parse: %s",
-                inet_ntoa(*reinterpret_cast<in_addr *>((*hostT).h_addr_list[i]))
-            );
-            ++i;
-        }
-
-        if (i < 1)
-            return false;
-
-        this->mRemoteActive0Client.socket = socket(AF_INET, SOCK_STREAM, 0);
-        this->mRemoteActive0Client.sockaddrIn.sin_family = AF_INET;
-        this->mRemoteActive0Client.sockaddrIn.sin_port = htons(this->mRemoteActive0Attr.port);
-        this->mRemoteActive0Client.sockaddrIn.sin_addr = *reinterpret_cast<in_addr *>((*hostT).h_addr_list[0]);
-
-        if (connect(
-            this->mRemoteActive0Client.socket,
-            reinterpret_cast<sockaddr *>(&this->mRemoteActive0Client.sockaddrIn),
-            sizeof(this->mRemoteActive0Client.sockaddrIn)
-        ) == -1)
-            return false;
-
-        this->mRemoteActive0Client.readCountTimes.tv_sec = this->mRemoteActive0Attr.timeouts;
-        this->mRemoteActive0Client.writeCountTimes.tv_sec = this->mRemoteActive0Attr.timeouts;
-
-        if (setsockopt(
-            this->mRemoteActive0Client.socket,
-            SOL_SOCKET,
-            SO_SNDTIMEO,
-            &this->mRemoteActive0Client.writeCountTimes,
-            sizeof(this->mRemoteActive0Client.writeCountTimes)
-        ) != 0)
-            return false;
-
-        if (setsockopt(
-            this->mRemoteActive0Client.socket,
-            SOL_SOCKET,
-            SO_RCVTIMEO,
-            &this->mRemoteActive0Client.readCountTimes,
-            sizeof(this->mRemoteActive0Client.readCountTimes)
-        ) != 0)
-            return false;
-
-        auto &&flag = fcntl(this->mRemoteActive0Client.socket, F_GETFL, 0);
-        fcntl(this->mRemoteActive0Client.socket, F_SETFL, (flag & ~O_NONBLOCK));
-        Log::Instance().Print<LogType::INFO>("remote activation socket initialization successful");
+        this->mRemoteActive0Client.socket = this->mRemoteActive0Client.socketObj.GetSocket();
         return true;
     }
 
     void SocketRelease()
     {
-        shutdown(this->mRemoteActive0Client.socket, SHUT_RDWR);
+        this->mRemoteActive0Client.socketObj.DisConnect();
     }
 
     Jbool ExecuteUnlockMessage()
@@ -341,7 +291,7 @@ private:
         {
             Errors::Instance().SetErrorType<ErrorsType::POS_INVALID>();
             return false;
-        } else if(ret != 0)
+        } else if (ret != 0)
         {
             Errors::Instance().SetErrorType<ErrorsType::POS_NEED_SHORT_SMALL_BATTERY_OR_REBOOT>();
             return false;

@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef SMARTTOOLS_SMART_JNI_SENSOR_HPP
 #define SMARTTOOLS_SMART_JNI_SENSOR_HPP
 

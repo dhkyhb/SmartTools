@@ -1,8 +1,12 @@
+#pragma once
+
 #ifndef SMARTTOOLS_SMART_ANDROID_CUSTOMER_CHECK_UNLOCK_HPP
 #define SMARTTOOLS_SMART_ANDROID_CUSTOMER_CHECK_UNLOCK_HPP
 
 #include "../kernel.hpp"
 #include "../smart_utils/smart_utils_simple_http.hpp"
+#include "../smart_utils/smart_utils_socket_based_on_linux.hpp"
+#include "../smart_utils/smart_utils_socket_ssl_based_on_mbedtls.hpp"
 #include "../smart_resouces/smart_resouces_errors.hpp"
 
 #include <mbedtls/ssl.h>
@@ -13,6 +17,8 @@ namespace smart::android::customer::check::unlock
 
 using smart::utils::simple::http::Http;
 using smart::utils::simple::http::HttpMethod;
+using smart::utils::soket::linux::Socket;
+using smart::utils::soket::ssl::based::on::mbedlts::SocketSSL;
 using smart::resouces::errors::Errors;
 using smart::resouces::errors::ErrorsType;
 
@@ -49,32 +55,22 @@ typedef struct CustomerCheckUnlockClient
     Jchar target[CUSTOMER_CHECK_UNLOCK_BUF_SIZE];
     Jchar cache[CUSTOMER_CHECK_UNLOCK_BUF_SIZE];
 
-    sockaddr_in sockaddrIn;
-    timeval readTimeouts;
-    timeval writeTimeouts;
-
-    mbedtls_x509_crt mbedtlsX509Crt;
-    mbedtls_ssl_config mbedtlsSslConfig;
-    mbedtls_ssl_context mbedtlsSslContext;
-
     std::stringstream jsonStream;
     boost::property_tree::ptree jsonRoot;
 
     Http http;
+    Socket socketObj;
+    SocketSSL socketSsl;
 
     CustomerCheckUnlockClient() :
         socket{},
         target{},
         cache{},
-        sockaddrIn{},
-        readTimeouts{},
-        writeTimeouts{},
-        mbedtlsX509Crt{},
-        mbedtlsSslConfig{},
-        mbedtlsSslContext{},
         jsonStream{},
         jsonRoot{},
-        http{}
+        http{},
+        socketObj{},
+        socketSsl{}
     {}
 } CustomerCheckUnlockClient;
 
@@ -261,16 +257,14 @@ private:
             if (!this->SSLInit())
                 break;
 
-            if (ret = mbedtls_ssl_write(
-                    &this->mCustomerCheckUnlockClient.mbedtlsSslContext,
+            if (ret = this->mCustomerCheckUnlockClient.socketSsl.Write(
                     reinterpret_cast<Jbyte *>(const_cast<Jchar *>(httpContent)),
                     strlen(httpContent)
                 );ret < 1)
                 break;
 
             memset(this->mCustomerCheckUnlockClient.cache, 0, sizeof(this->mCustomerCheckUnlockClient.cache));
-            if (ret = mbedtls_ssl_read(
-                    &this->mCustomerCheckUnlockClient.mbedtlsSslContext,
+            if (ret = this->mCustomerCheckUnlockClient.socketSsl.Read(
                     reinterpret_cast<Jbyte *>(this->mCustomerCheckUnlockClient.cache),
                     sizeof(this->mCustomerCheckUnlockClient.cache)
                 );ret < 1)
@@ -293,183 +287,33 @@ private:
 
     Jbool SSLInit()
     {
-        Jint ret = 0;
-        Jbool state = true;
-
-        mbedtls_x509_crt_init(&this->mCustomerCheckUnlockClient.mbedtlsX509Crt);
-        mbedtls_ssl_config_init(&this->mCustomerCheckUnlockClient.mbedtlsSslConfig);
-        mbedtls_ssl_init(&this->mCustomerCheckUnlockClient.mbedtlsSslContext);
-
         if (!this->SocketInit())
             return false;
 
-        if (ret = mbedtls_x509_crt_parse(
-                &this->mCustomerCheckUnlockClient.mbedtlsX509Crt,
-                reinterpret_cast<Jbyte *>(const_cast<Jchar *>(this->mCustomerCheckUnlockAttr.clientCert)),
-                (strlen(this->mCustomerCheckUnlockAttr.clientCert) + 1)
-            );ret < 0)
-        {
-            Log::Instance().Print<LogType::ERROR>("ssl cert parse fail, ret: %d", ret);
-            return false;
-        }
-
-        if (ret = mbedtls_ssl_config_defaults(
-                &this->mCustomerCheckUnlockClient.mbedtlsSslConfig,
-                MBEDTLS_SSL_IS_CLIENT,
-                MBEDTLS_SSL_TRANSPORT_STREAM,
-                MBEDTLS_SSL_PRESET_DEFAULT
-            );ret != 0)
-        {
-            Log::Instance().Print<LogType::ERROR>("ssl config fail, ret: %d", ret);
-            return false;
-        }
-
-        mbedtls_ssl_conf_authmode(&this->mCustomerCheckUnlockClient.mbedtlsSslConfig, MBEDTLS_SSL_VERIFY_OPTIONAL);
-        mbedtls_ssl_conf_ca_chain(
-            &this->mCustomerCheckUnlockClient.mbedtlsSslConfig,
-            &this->mCustomerCheckUnlockClient.mbedtlsX509Crt,
-            nullptr
-        );
-
-        mbedtls_ssl_conf_rng(
-            &this->mCustomerCheckUnlockClient.mbedtlsSslConfig,
-            [](void *pRng, Jbyte *output, Jsize outputLen) -> Jint {
-                Jint rnglen = outputLen;
-                Jbyte rngoffset = 0;
-
-                while (rnglen > 0)
-                {
-                    *(&output[rngoffset]) = static_cast<Jbyte>(
-                        (static_cast<Juint>(rand()) << static_cast<Juint>(16)) + rand()
-                    );
-                    rngoffset++;
-                    rnglen--;
-                }
-
-                return 0;
-            },
-            nullptr
-        );
-
-        if (ret = mbedtls_ssl_setup(
-                &this->mCustomerCheckUnlockClient.mbedtlsSslContext,
-                &this->mCustomerCheckUnlockClient.mbedtlsSslConfig
-            );ret != 0)
-        {
-            Log::Instance().Print<LogType::ERROR>("step config to ssl context is fail, ret: %d", ret);
-            return false;
-        }
-
-        if (ret = mbedtls_ssl_set_hostname(
-                &this->mCustomerCheckUnlockClient.mbedtlsSslContext,
-                this->mCustomerCheckUnlockAttr.address
-            );ret != 0)
-        {
-            Log::Instance().Print<LogType::ERROR>("ssl set hostname fail, ret: %d", ret);
-            return false;
-        }
-
-        mbedtls_ssl_set_bio(
-            &this->mCustomerCheckUnlockClient.mbedtlsSslContext,
-            &this->mCustomerCheckUnlockClient,
-            [](void *ctx, const Jbyte *buf, Jsize len) -> Jint {
-                auto &&client = *reinterpret_cast<CustomerCheckUnlockClient *>(ctx);
-                return send(client.socket, buf, len, 0);
-            },
-            [](void *ctx, Jbyte *buf, Jsize len) -> Jint {
-                auto &&client = *reinterpret_cast<CustomerCheckUnlockClient *>(ctx);
-                return recv(client.socket, buf, len, 0);
-            },
-            [](void *ctx, Jbyte *buf, Jsize len, Juint timeouts) -> Jint {
-                auto &&client = *reinterpret_cast<CustomerCheckUnlockClient *>(ctx);
-                return recv(client.socket, buf, len, 0);
-            }
-        );
-
-        while ((ret = mbedtls_ssl_handshake(&this->mCustomerCheckUnlockClient.mbedtlsSslContext)) != 0)
-        {
-            if ((ret == MBEDTLS_ERR_SSL_WANT_READ) || (ret == MBEDTLS_ERR_SSL_WANT_WRITE))
-                continue;
-            if (ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED)
-            {
-                state = false;
-                break;
-            }
-        }
-
-        return state;
+        this->mCustomerCheckUnlockClient.socket = this->mCustomerCheckUnlockClient.socketObj.GetSocket();
+        return this->mCustomerCheckUnlockClient.socketSsl.SetCert(this->mCustomerCheckUnlockAttr.clientCert)
+            .SetSocketID(this->mCustomerCheckUnlockClient.socket)
+            .SetHostName(this->mCustomerCheckUnlockAttr.address).Connect();
     }
 
     void SSLRelease()
     {
-        mbedtls_ssl_free(&this->mCustomerCheckUnlockClient.mbedtlsSslContext);
-        mbedtls_ssl_config_free(&this->mCustomerCheckUnlockClient.mbedtlsSslConfig);
-        mbedtls_x509_crt_free(&this->mCustomerCheckUnlockClient.mbedtlsX509Crt);
+        this->mCustomerCheckUnlockClient.socketSsl.DisConnect();
         this->SocketClose();
     }
 
     Jbool SocketInit()
     {
-        Jint i = 0;
-
-        auto &&hostT = gethostbyname(this->mCustomerCheckUnlockAttr.address);
-        if (hostT == nullptr)
-            return false;
-
-        while ((*hostT).h_addr_list[i] != nullptr)
-        {
-            Log::Instance().Print<LogType::DEBUG>(
-                "customer check unlock address parse: %s",
-                inet_ntoa(*reinterpret_cast<in_addr *>((*hostT).h_addr_list[i]))
-            );
-            ++i;
-        }
-
-        if (i < 1)
-            return false;
-
-        this->mCustomerCheckUnlockClient.socket = socket(AF_INET, SOCK_STREAM, 0);
-        this->mCustomerCheckUnlockClient.sockaddrIn.sin_family = AF_INET;
-        this->mCustomerCheckUnlockClient.sockaddrIn.sin_port = htons(this->mCustomerCheckUnlockAttr.port);
-        this->mCustomerCheckUnlockClient.sockaddrIn.sin_addr = *reinterpret_cast<in_addr *>((*hostT).h_addr_list[0]);
-
-        if (connect(
-            this->mCustomerCheckUnlockClient.socket,
-            reinterpret_cast<sockaddr *>(&this->mCustomerCheckUnlockClient.sockaddrIn),
-            sizeof(this->mCustomerCheckUnlockClient.sockaddrIn)
-        ) == -1)
-            return false;
-
-        this->mCustomerCheckUnlockClient.readTimeouts.tv_sec = CUSTOMER_CHECK_UNLOCK_REQUEST_TIMES;
-        this->mCustomerCheckUnlockClient.writeTimeouts.tv_sec = CUSTOMER_CHECK_UNLOCK_REQUEST_TIMES;
-
-        if (setsockopt(
-            this->mCustomerCheckUnlockClient.socket,
-            SOL_SOCKET,
-            SO_SNDTIMEO,
-            &this->mCustomerCheckUnlockClient.writeTimeouts,
-            sizeof(this->mCustomerCheckUnlockClient.writeTimeouts)
-        ) != 0)
-            return false;
-
-        if (setsockopt(
-            this->mCustomerCheckUnlockClient.socket,
-            SOL_SOCKET,
-            SO_RCVTIMEO,
-            &this->mCustomerCheckUnlockClient.readTimeouts,
-            sizeof(this->mCustomerCheckUnlockClient.readTimeouts)
-        ) != 0)
-            return false;
-
-        auto &&flag = fcntl(this->mCustomerCheckUnlockClient.socket, F_GETFL, 0);
-        fcntl(this->mCustomerCheckUnlockClient.socket, F_SETFL, (flag & ~O_NONBLOCK));
-        Log::Instance().Print<LogType::INFO>("customer check unlock socket initialization successful");
-        return true;
+        return this->mCustomerCheckUnlockClient.socketObj.SetAddress(this->mCustomerCheckUnlockAttr.address)
+            .SetPort(this->mCustomerCheckUnlockAttr.port)
+            .SetReadTimeoutsSecounds(CUSTOMER_CHECK_UNLOCK_REQUEST_TIMES)
+            .SetWriteTimeoutsSecounds(CUSTOMER_CHECK_UNLOCK_REQUEST_TIMES)
+            .Connect();
     }
 
     void SocketClose()
     {
-        shutdown(this->mCustomerCheckUnlockClient.socket, SHUT_RDWR);
+        this->mCustomerCheckUnlockClient.socketObj.DisConnect();
     }
 
     template<CustomerCheckUnlockProcedure _Procedure>

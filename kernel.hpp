@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef SMARTTOOLS_KERNEL_HPP
 #define SMARTTOOLS_KERNEL_HPP
 

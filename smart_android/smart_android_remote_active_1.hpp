@@ -1,9 +1,12 @@
+#pragma once
+
 #ifndef SMARTTOOLS_SMART_ANDROID_REMOTE_ACTIVE_1_HPP
 #define SMARTTOOLS_SMART_ANDROID_REMOTE_ACTIVE_1_HPP
 
 #include "../kernel.hpp"
 #include "../smart_utils/smart_utils_strings.hpp"
 #include "../smart_utils/smart_utils_simple_http.hpp"
+#include "../smart_utils/smart_utils_socket_based_on_linux.hpp"
 #include "../smart_resouces/smart_resouces_errors.hpp"
 
 #include "smart_android_config.hpp"
@@ -11,14 +14,13 @@
 #include <APosSecurityManager.h>
 #include <boost/property_tree/json_parser.hpp>
 
-#include <fcntl.h>
-
 namespace smart::android::remote::active1
 {
 
 using smart::utils::strings::Strings;
 using smart::utils::simple::http::Http;
 using smart::utils::simple::http::HttpMethod;
+using smart::utils::soket::linux::Socket;
 using smart::resouces::errors::Errors;
 using smart::resouces::errors::ErrorsType;
 
@@ -64,31 +66,25 @@ typedef struct RemoteActive1Client
     Jchar target[REMOTE_ACTIVE1_CLIENT_BUF_SIZE];
     Jchar cache[REMOTE_ACTIVE1_CLIENT_BUF_SIZE];
 
-    sockaddr_in sockaddrIn;
-    timeval readCountTimes;
-    timeval writeCountTimes;
-
     std::stringstream jsonStream;
     boost::property_tree::ptree jsonRoot;
 
     Http http;
+    Socket socketObj;
 
     RemoteActive1Client() :
         socket{},
         target{},
         cache{},
-        sockaddrIn{},
-        readCountTimes{},
-        writeCountTimes{},
         jsonStream{},
         jsonRoot{},
-        http{}
+        http{},
+        socketObj{}
     {}
 } RemoteActive1Client;
 
 constexpr Jint REMOTEACTIVE1_APPLY_ACTIVE_CODE_BY_SP_OF_MODE = 0;
 constexpr Jint REMOTEACTIVE1_REQUEST_TIMEOUTS = 3;
-constexpr Jint REMOTEACTIVE1_RESPONSE_TIMEOUTS = 3;
 
 constexpr Jchar REMOTEACTIVE1_TARGET_REQUEST_REGISTER[] =
     "/posService/requestunlock?"
@@ -321,66 +317,16 @@ private:
 
     Jbool SocketInit()
     {
-        Jint i = 0;
-
-        auto &&hostT = gethostbyname(this->mRemoteActive1Area.address);
-        if (hostT == nullptr)
-            return false;
-
-        while ((*hostT).h_addr_list[i] != nullptr)
-        {
-            Log::Instance().Print<LogType::DEBUG>(
-                "remote activation address parse: %s",
-                inet_ntoa(*reinterpret_cast<in_addr *>((*hostT).h_addr_list[i]))
-            );
-            ++i;
-        }
-
-        if (i < 1)
-            return false;
-
-        this->mRemoteActive1Client.socket = socket(AF_INET, SOCK_STREAM, 0);
-        this->mRemoteActive1Client.sockaddrIn.sin_family = AF_INET;
-        this->mRemoteActive1Client.sockaddrIn.sin_port = htons(this->mRemoteActive1Area.port);
-        this->mRemoteActive1Client.sockaddrIn.sin_addr = *reinterpret_cast<in_addr *>((*hostT).h_addr_list[0]);
-
-        if (connect(
-            this->mRemoteActive1Client.socket,
-            reinterpret_cast<sockaddr *>(&this->mRemoteActive1Client.sockaddrIn),
-            sizeof(this->mRemoteActive1Client.sockaddrIn)
-        ) == -1)
-            return false;
-
-        this->mRemoteActive1Client.readCountTimes.tv_sec = REMOTEACTIVE1_RESPONSE_TIMEOUTS;
-        this->mRemoteActive1Client.writeCountTimes.tv_sec = REMOTEACTIVE1_REQUEST_TIMEOUTS;
-
-        if (setsockopt(
-            this->mRemoteActive1Client.socket,
-            SOL_SOCKET,
-            SO_SNDTIMEO,
-            &this->mRemoteActive1Client.writeCountTimes,
-            sizeof(this->mRemoteActive1Client.writeCountTimes)
-        ) != 0)
-            return false;
-
-        if (setsockopt(
-            this->mRemoteActive1Client.socket,
-            SOL_SOCKET,
-            SO_RCVTIMEO,
-            &this->mRemoteActive1Client.readCountTimes,
-            sizeof(this->mRemoteActive1Client.readCountTimes)
-        ) != 0)
-            return false;
-
-        auto &&flag = fcntl(this->mRemoteActive1Client.socket, F_GETFL, 0);
-        fcntl(this->mRemoteActive1Client.socket, F_SETFL, (flag & ~O_NONBLOCK));
-        Log::Instance().Print<LogType::INFO>("remote activation socket initialization successful");
-        return true;
+        return this->mRemoteActive1Client.socketObj.SetAddress(this->mRemoteActive1Area.address)
+        .SetPort(this->mRemoteActive1Area.port)
+        .SetReadTimeoutsSecounds(REMOTEACTIVE1_REQUEST_TIMEOUTS)
+        .SetWriteTimeoutsSecounds(REMOTEACTIVE1_REQUEST_TIMEOUTS)
+        .Connect();
     }
 
     void SocketClose()
     {
-        shutdown(this->mRemoteActive1Client.socket, SHUT_RDWR);
+        this->mRemoteActive1Client.socketObj.DisConnect();
     }
 
     Jbool SetActiveCodeBySP()

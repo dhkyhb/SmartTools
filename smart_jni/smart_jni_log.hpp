@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef SMARTTOOLS_SMART_JNI_LOG_HPP
 #define SMARTTOOLS_SMART_JNI_LOG_HPP
 

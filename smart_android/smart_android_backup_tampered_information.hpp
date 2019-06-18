@@ -1,9 +1,13 @@
+#pragma once
+
 #ifndef SMARTTOOLS_SMART_ANDROID_BACKUP_TAMPERED_INFORMATION_HPP
 #define SMARTTOOLS_SMART_ANDROID_BACKUP_TAMPERED_INFORMATION_HPP
 
 #include "../kernel.hpp"
 #include "../smart_utils/smart_utils_strings.hpp"
 #include "../smart_utils/smart_utils_simple_http.hpp"
+#include "../smart_utils/smart_utils_socket_based_on_linux.hpp"
+#include "../smart_utils/smart_utils_socket_ssl_based_on_mbedtls.hpp"
 
 namespace smart::android::backup::tampered::information
 {
@@ -11,6 +15,8 @@ namespace smart::android::backup::tampered::information
 using smart::utils::strings::Strings;
 using smart::utils::simple::http::Http;
 using smart::utils::simple::http::HttpMethod;
+using smart::utils::soket::linux::Socket;
+using smart::utils::soket::ssl::based::on::mbedlts::SocketSSL;
 
 constexpr Jint BACKUP_TAMPERED_INFORMATION_BUF_SIZE = 2048;
 constexpr Jint BACKUP_TAMPERED_INFORMATION_TIME_SIZE = 32;
@@ -50,15 +56,9 @@ typedef struct
     Jchar target[BACKUP_TAMPERED_INFORMATION_BUF_SIZE];
     Jchar cache[BACKUP_TAMPERED_INFORMATION_BUF_SIZE];
 
-    sockaddr_in sockaddrIn;
-    timeval readTimeouts;
-    timeval writeTimeouts;
-
-    mbedtls_x509_crt mbedtlsX509Crt;
-    mbedtls_ssl_config mbedtlsSslConfig;
-    mbedtls_ssl_context mbedtlsSslContext;
-
     Http http;
+    Socket socketObj;
+    SocketSSL socketSSL;
 } BackupTamperedInformationClient;
 
 constexpr Jint BACKUP_TAMPERED_INFORMATION_REQUEST_TIMEOUTS = 10;
@@ -240,8 +240,7 @@ private:
             if (!this->SSLInit())
                 break;
 
-            if (ret = mbedtls_ssl_write(
-                    &this->mBackupTamperedInformationClient.mbedtlsSslContext,
+            if (ret = this->mBackupTamperedInformationClient.socketSSL.Write(
                     reinterpret_cast<Jbyte *>(const_cast<Jchar *>(url)),
                     strlen(url)
                 );ret < 1)
@@ -253,8 +252,7 @@ private:
                 sizeof(this->mBackupTamperedInformationClient.cache)
             );
 
-            if (ret = mbedtls_ssl_read(
-                    &this->mBackupTamperedInformationClient.mbedtlsSslContext,
+            if (ret = this->mBackupTamperedInformationClient.socketSSL.Read(
                     reinterpret_cast<Jbyte *>(this->mBackupTamperedInformationClient.cache),
                     sizeof(this->mBackupTamperedInformationClient.cache)
                 );ret < 1)
@@ -271,188 +269,34 @@ private:
 
     Jbool SSLInit()
     {
-        Jint ret = 0;
-        Jbool state = true;
-
-        mbedtls_x509_crt_init(&this->mBackupTamperedInformationClient.mbedtlsX509Crt);
-        mbedtls_ssl_config_init(&this->mBackupTamperedInformationClient.mbedtlsSslConfig);
-        mbedtls_ssl_init(&this->mBackupTamperedInformationClient.mbedtlsSslContext);
-
         if (!this->SocketInit())
             return false;
 
-        if (ret = mbedtls_x509_crt_parse(
-                &this->mBackupTamperedInformationClient.mbedtlsX509Crt,
-                reinterpret_cast<Jbyte *>(const_cast<Jchar *>(this->mBackupTamperedInformationAttr.cert)),
-                (strlen(this->mBackupTamperedInformationAttr.cert) + 1)
-            );ret < 0)
-        {
-            Log::Instance().Print<LogType::DEBUG>("ssl cert parse fail, ret: %d", ret);
-            return false;
-        }
-
-        if (ret = mbedtls_ssl_config_defaults(
-                &this->mBackupTamperedInformationClient.mbedtlsSslConfig,
-                MBEDTLS_SSL_IS_CLIENT,
-                MBEDTLS_SSL_TRANSPORT_STREAM,
-                MBEDTLS_SSL_PRESET_DEFAULT
-            );ret != 0)
-        {
-            Log::Instance().Print<LogType::DEBUG>("ssl config fail, ret: %d", ret);
-            return false;
-        }
-
-        mbedtls_ssl_conf_authmode(
-            &this->mBackupTamperedInformationClient.mbedtlsSslConfig,
-            MBEDTLS_SSL_VERIFY_OPTIONAL
-        );
-        mbedtls_ssl_conf_ca_chain(
-            &this->mBackupTamperedInformationClient.mbedtlsSslConfig,
-            &this->mBackupTamperedInformationClient.mbedtlsX509Crt,
-            nullptr
-        );
-
-        mbedtls_ssl_conf_rng(
-            &this->mBackupTamperedInformationClient.mbedtlsSslConfig,
-            [](void *pRng, Jbyte *output, Jsize outputLen) -> Jint {
-                Jint rnglen = outputLen;
-                Jbyte rngoffset = 0;
-
-                while (rnglen > 0)
-                {
-                    *(&output[rngoffset]) = static_cast<Jbyte>(
-                        (static_cast<Juint>(rand()) << static_cast<Juint>(16)) + rand()
-                    );
-                    rngoffset++;
-                    rnglen--;
-                }
-
-                return 0;
-            },
-            nullptr
-        );
-
-        if (ret = mbedtls_ssl_setup(
-                &this->mBackupTamperedInformationClient.mbedtlsSslContext,
-                &this->mBackupTamperedInformationClient.mbedtlsSslConfig
-            );ret != 0)
-        {
-            Log::Instance().Print<LogType::ERROR>("step config to ssl context is fail, ret: %d", ret);
-            return false;
-        }
-
-        if (ret = mbedtls_ssl_set_hostname(
-                &this->mBackupTamperedInformationClient.mbedtlsSslContext,
-                this->mBackupTamperedInformationAttr.address
-            );ret != 0)
-        {
-            Log::Instance().Print<LogType::ERROR>("ssl set hostname fail, ret: %d", ret);
-            return false;
-        }
-
-        mbedtls_ssl_set_bio(
-            &this->mBackupTamperedInformationClient.mbedtlsSslContext,
-            &this->mBackupTamperedInformationClient,
-            [](void *ctx, const Jbyte *buf, Jsize len) -> Jint {
-                auto &&client = *reinterpret_cast<BackupTamperedInformationClient *>(ctx);
-                return send(client.socket, buf, len, 0);
-            },
-            [](void *ctx, Jbyte *buf, Jsize len) -> Jint {
-                auto &&client = *reinterpret_cast<BackupTamperedInformationClient *>(ctx);
-                return recv(client.socket, buf, len, 0);
-            },
-            [](void *ctx, Jbyte *buf, Jsize len, Juint timeouts) -> Jint {
-                auto &&client = *reinterpret_cast<BackupTamperedInformationClient *>(ctx);
-                return recv(client.socket, buf, len, 0);
-            }
-        );
-
-        while ((ret = mbedtls_ssl_handshake(&this->mBackupTamperedInformationClient.mbedtlsSslContext)) != 0)
-        {
-            if ((ret == MBEDTLS_ERR_SSL_WANT_READ) || (ret == MBEDTLS_ERR_SSL_WANT_WRITE))
-                continue;
-            if (ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED)
-            {
-                state = false;
-                break;
-            }
-        }
-
-        return state;
+        this->mBackupTamperedInformationClient.socket = this->mBackupTamperedInformationClient.socketObj.GetSocket();
+        return this->mBackupTamperedInformationClient.socketSSL.SetCert(this->mBackupTamperedInformationAttr.cert)
+            .SetHostName(this->mBackupTamperedInformationAttr.address)
+            .SetSocketID(this->mBackupTamperedInformationClient.socket)
+            .Connect();
     }
 
     void SSLRelease()
     {
-        mbedtls_x509_crt_free(&this->mBackupTamperedInformationClient.mbedtlsX509Crt);
-        mbedtls_ssl_config_free(&this->mBackupTamperedInformationClient.mbedtlsSslConfig);
-        mbedtls_ssl_free(&this->mBackupTamperedInformationClient.mbedtlsSslContext);
+        this->mBackupTamperedInformationClient.socketSSL.DisConnect();
         this->SocketClose();
     }
 
     Jbool SocketInit()
     {
-        Jint i = 0;
-
-        auto &&hostT = gethostbyname(this->mBackupTamperedInformationAttr.address);
-        if (hostT == nullptr)
-            return false;
-
-        while ((*hostT).h_addr_list[i] != nullptr)
-        {
-            Log::Instance().Print<LogType::DEBUG>(
-                "backup tampered information address parse: %s",
-                inet_ntoa(*reinterpret_cast<in_addr *>((*hostT).h_addr_list[i]))
-            );
-            ++i;
-        }
-
-        if (i < 1)
-            return false;
-
-        this->mBackupTamperedInformationClient.socket = socket(AF_INET, SOCK_STREAM, 0);
-        this->mBackupTamperedInformationClient.sockaddrIn.sin_family = AF_INET;
-        this->mBackupTamperedInformationClient.sockaddrIn.sin_port =
-            htons(this->mBackupTamperedInformationAttr.port);
-        this->mBackupTamperedInformationClient.sockaddrIn.sin_addr =
-            *reinterpret_cast<in_addr *>((*hostT).h_addr_list[0]);
-
-        if (connect(
-            this->mBackupTamperedInformationClient.socket,
-            reinterpret_cast<sockaddr *>(&this->mBackupTamperedInformationClient.sockaddrIn),
-            sizeof(this->mBackupTamperedInformationClient.sockaddrIn)
-        ) == -1)
-            return false;
-
-        this->mBackupTamperedInformationClient.readTimeouts.tv_sec = BACKUP_TAMPERED_INFORMATION_REQUEST_TIMEOUTS;
-        this->mBackupTamperedInformationClient.writeTimeouts.tv_sec = BACKUP_TAMPERED_INFORMATION_REQUEST_TIMEOUTS;
-
-        if (setsockopt(
-            this->mBackupTamperedInformationClient.socket,
-            SOL_SOCKET,
-            SO_SNDTIMEO,
-            &this->mBackupTamperedInformationClient.writeTimeouts,
-            sizeof(this->mBackupTamperedInformationClient.writeTimeouts)
-        ) != 0)
-            return false;
-
-        if (setsockopt(
-            this->mBackupTamperedInformationClient.socket,
-            SOL_SOCKET,
-            SO_RCVTIMEO,
-            &this->mBackupTamperedInformationClient.readTimeouts,
-            sizeof(this->mBackupTamperedInformationClient.readTimeouts)
-        ) != 0)
-            return false;
-
-        auto &&flag = fcntl(this->mBackupTamperedInformationClient.socket, F_GETFL, 0);
-        fcntl(this->mBackupTamperedInformationClient.socket, F_SETFL, (flag & ~O_NONBLOCK));
-        Log::Instance().Print<LogType::INFO>("backup tampered information socket initialization successful");
-        return true;
+        return this->mBackupTamperedInformationClient.socketObj.SetAddress(this->mBackupTamperedInformationAttr.address)
+            .SetPort(this->mBackupTamperedInformationAttr.port)
+            .SetWriteTimeoutsSecounds(BACKUP_TAMPERED_INFORMATION_REQUEST_TIMEOUTS)
+            .SetReadTimeoutsSecounds(BACKUP_TAMPERED_INFORMATION_REQUEST_TIMEOUTS)
+            .Connect();
     }
 
     void SocketClose()
     {
-        shutdown(this->mBackupTamperedInformationClient.socket, SHUT_RDWR);
+        this->mBackupTamperedInformationClient.socketObj.DisConnect();
     }
 
     Jbool Marshal()
