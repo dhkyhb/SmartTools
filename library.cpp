@@ -1,4 +1,7 @@
+#include "smart_jni/smart_jni_local_active.hpp"
+#include "smart_jni/smart_jni_system_call.hpp"
 #include "smart_jni/smart_jni_environment.hpp"
+#include "smart_jni/smart_jni_environment_get.hpp"
 #include "smart_jni/smart_jni_log.hpp"
 #include "smart_jni/smart_jni_sensor.hpp"
 #include "smart_jni/smart_jni_everything.hpp"

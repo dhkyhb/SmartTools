@@ -275,6 +275,7 @@ private:
         if (!this->SocketInit())
             return state;
 
+        this->mRemoteActive1Client.socket = this->mRemoteActive1Client.socketObj.GetSocket();
         this->mRemoteActive1Client.http.Init()
             .SetMethod(HttpMethod::GET)
             .SetHost(this->mRemoteActive1Area.address)
@@ -300,6 +301,7 @@ private:
             );
             if (ret < 1)
                 break;
+
             if (!this->mRemoteActive1Client.http.Parse(this->mRemoteActive1Client.cache, ret))
                 break;
 
@@ -318,10 +320,10 @@ private:
     Jbool SocketInit()
     {
         return this->mRemoteActive1Client.socketObj.SetAddress(this->mRemoteActive1Area.address)
-        .SetPort(this->mRemoteActive1Area.port)
-        .SetReadTimeoutsSecounds(REMOTEACTIVE1_REQUEST_TIMEOUTS)
-        .SetWriteTimeoutsSecounds(REMOTEACTIVE1_REQUEST_TIMEOUTS)
-        .Connect();
+            .SetPort(this->mRemoteActive1Area.port)
+            .SetReadTimeoutsSecounds(REMOTEACTIVE1_REQUEST_TIMEOUTS)
+            .SetWriteTimeoutsSecounds(REMOTEACTIVE1_REQUEST_TIMEOUTS)
+            .Connect();
     }
 
     void SocketClose()

@@ -25,10 +25,10 @@ typedef struct JniAttr
     std::mutex *jniLock;
 
     JniAttr() :
-            check{},
-            javaVm{},
-            jniObject{},
-            jniLock{new std::mutex()}
+        check{},
+        javaVm{},
+        jniObject{},
+        jniLock{new std::mutex()}
     {}
 
     JniAttr(const JniAttr &self) = default;
@@ -41,10 +41,11 @@ constexpr Jchar JNI_THREAD_LOOP_CALLBACK_METHOD_PARAMETER[] = "(I)V";
 
 JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartThreadLoop_Insert(JNIEnv *env, jobject self, jobject method)
 {
-    if ((JniAttrList == nullptr) || ((*JniAttrList).javaVm == nullptr))
-        return self;
+    if (JniAttrList == nullptr)
+        JniAttrList = new JniAttr();
 
     (*JniAttrList).jniLock->lock();
+    (*env).GetJavaVM(&(*JniAttrList).javaVm);
     (*JniAttrList).jniObject = (*env).NewGlobalRef(method);
     (*JniAttrList).check = false;
     ThreadLoop::Instance().Insert(JniAttrList, [](Jint id, void *p) {
@@ -54,7 +55,7 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartThreadLoop_Insert(JNIEnv 
         auto jni = *reinterpret_cast<JniAttr *>(p);
 
         (*JniAttrList).check = true;
-        if (jni.javaVm->AttachCurrentThread(&env, nullptr) != JNI_OK)
+        if ((*jni.javaVm).AttachCurrentThread(&env, nullptr) != JNI_OK)
             return;
 
         do
@@ -63,20 +64,20 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartThreadLoop_Insert(JNIEnv 
                 break;
 
             if (processId = (*env).GetMethodID(
-                        callback,
-                        JNI_THREAD_LOOP_CALLBACK_METHOD_NAME,
-                        JNI_THREAD_LOOP_CALLBACK_METHOD_PARAMETER
+                    callback,
+                    JNI_THREAD_LOOP_CALLBACK_METHOD_NAME,
+                    JNI_THREAD_LOOP_CALLBACK_METHOD_PARAMETER
                 );processId == nullptr)
                 break;
 
             (*env).CallVoidMethod(jni.jniObject, processId, id);
         } while (false);
 
-        if(callback != nullptr)
+        if (callback != nullptr)
             (*env).DeleteLocalRef(callback);
         if (jni.jniObject != nullptr)
             (*env).DeleteGlobalRef(jni.jniObject);
-        jni.javaVm->DetachCurrentThread();
+        (*jni.javaVm).DetachCurrentThread();
     });
 
     return self;

@@ -45,7 +45,7 @@ public:
         while ((*hostT).h_addr_list[i] != nullptr)
         {
             Log::Instance().Print<LogType::DEBUG>(
-                "customer check unlock address parse: %s",
+                "address parse: %s",
                 inet_ntoa(*reinterpret_cast<in_addr *>((*hostT).h_addr_list[i]))
             );
             ++i;
@@ -86,7 +86,7 @@ public:
 
         auto &&flag = fcntl(this->mSocketAttr.socket, F_GETFL, 0);
         fcntl(this->mSocketAttr.socket, F_SETFL, (flag & ~O_NONBLOCK));
-        Log::Instance().Print<LogType::INFO>("customer check unlock socket initialization successful");
+        Log::Instance().Print<LogType::INFO>("socket initialization successful");
         return true;
     }
 

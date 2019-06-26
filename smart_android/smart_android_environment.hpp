@@ -78,7 +78,6 @@ public:
             memset(this->mEnvironmentAttr.sn, 0, sizeof(this->mEnvironmentAttr.sn));
             memcpy(this->mEnvironmentAttr.sn, v, vLen);
         } while (false);
-
         return (*this);
     }
 
@@ -90,13 +89,46 @@ public:
         {
             if (v == nullptr)
                 break;
-            if (vLen = strlen(v);vLen > static_cast<Jint>(sizeof(this->mEnvironmentAttr.deviceModel) - 1 ))
+            if (vLen = strlen(v);vLen > static_cast<Jint>(sizeof(this->mEnvironmentAttr.deviceModel) - 1))
                 break;
 
             memset(this->mEnvironmentAttr.deviceModel, 0, sizeof(this->mEnvironmentAttr.deviceModel));
             memcpy(this->mEnvironmentAttr.deviceModel, v, vLen);
         } while (false);
+        return (*this);
+    }
 
+    Environment &SetCustomer(const Jchar *v)
+    {
+        Jint vLen = 0;
+
+        do
+        {
+            if (v == nullptr)
+                break;
+            if (vLen = strlen(v);vLen > static_cast<Jint>(sizeof(this->mEnvironmentAttr.customer) - 1))
+                break;
+
+            memset(this->mEnvironmentAttr.customer, 0, sizeof(this->mEnvironmentAttr.customer));
+            memcpy(this->mEnvironmentAttr.customer, v, vLen);
+        } while (false);
+        return (*this);
+    }
+
+    Environment &SetSubCustomer(const Jchar *v)
+    {
+        Jint vLen = 0;
+
+        do
+        {
+            if (v == nullptr)
+                break;
+            if (vLen = strlen(v);vLen > static_cast<Jint>(sizeof(this->mEnvironmentAttr.subCustomer) - 1))
+                break;
+
+            memset(this->mEnvironmentAttr.subCustomer, 0, sizeof(this->mEnvironmentAttr.subCustomer));
+            memcpy(this->mEnvironmentAttr.subCustomer, v, vLen);
+        } while (false);
         return (*this);
     }
 
@@ -114,7 +146,6 @@ public:
             memset(this->mEnvironmentAttr.oldCustomer, 0, sizeof(this->mEnvironmentAttr.oldCustomer));
             memcpy(this->mEnvironmentAttr.oldCustomer, v, vLen);
         } while (false);
-
         return (*this);
     }
 
@@ -132,7 +163,6 @@ public:
             memset(this->mEnvironmentAttr.oldSubCustomer, 0, sizeof(this->mEnvironmentAttr.oldSubCustomer));
             memcpy(this->mEnvironmentAttr.oldSubCustomer, v, vLen);
         } while (false);
-
         return (*this);
     }
 
@@ -150,7 +180,6 @@ public:
             memset(this->mEnvironmentAttr.androidVersion, 0, sizeof(this->mEnvironmentAttr.androidVersion));
             memcpy(this->mEnvironmentAttr.androidVersion, v, vLen);
         } while (false);
-
         return (*this);
     }
 
@@ -168,7 +197,6 @@ public:
             memset(this->mEnvironmentAttr.androidSDKVersion, 0, sizeof(this->mEnvironmentAttr.androidSDKVersion));
             memcpy(this->mEnvironmentAttr.androidSDKVersion, v, vLen);
         } while (false);
-
         return (*this);
     }
 
@@ -186,7 +214,6 @@ public:
             memset(this->mEnvironmentAttr.androidID, 0, sizeof(this->mEnvironmentAttr.androidID));
             memcpy(this->mEnvironmentAttr.androidID, v, vLen);
         } while (false);
-
         return (*this);
     }
 
@@ -204,7 +231,6 @@ public:
             memset(this->mEnvironmentAttr.androidDevice, 0, sizeof(this->mEnvironmentAttr.androidDevice));
             memcpy(this->mEnvironmentAttr.androidDevice, v, vLen);
         } while (false);
-
         return (*this);
     }
 
@@ -222,7 +248,6 @@ public:
             memset(this->mEnvironmentAttr.androidBootloader, 0, sizeof(this->mEnvironmentAttr.androidBootloader));
             memcpy(this->mEnvironmentAttr.androidBootloader, v, vLen);
         } while (false);
-
         return (*this);
     }
 
@@ -240,7 +265,6 @@ public:
             memset(this->mEnvironmentAttr.customerCheckCert, 0, sizeof(this->mEnvironmentAttr.customerCheckCert));
             memcpy(this->mEnvironmentAttr.customerCheckCert, v, vLen);
         } while (false);
-
         return (*this);
     }
 
@@ -296,31 +320,36 @@ public:
 
     const Jchar *GetCustomer()
     {
-        this->ToGetSysInformations();
+        if (strlen(this->mEnvironmentAttr.customer) == 0)
+            this->ToGetSysInformations();
         return this->mEnvironmentAttr.customer;
     }
 
     const Jchar *GetSubCustomer()
     {
-        this->ToGetSysInformations();
+        if (strlen(this->mEnvironmentAttr.subCustomer) == 0)
+            this->ToGetSysInformations();
         return this->mEnvironmentAttr.subCustomer;
     }
 
     const Jchar *GetHardwareVersion()
     {
-        this->ToGetSysInformations();
+        if (strlen(this->mEnvironmentAttr.hardwareVersion) == 0)
+            this->ToGetSysInformations();
         return this->mEnvironmentAttr.hardwareVersion;
     }
 
     const Jchar *GetSoftwareVersion()
     {
-        this->ToGetSysInformations();
+        if (strlen(this->mEnvironmentAttr.softwareVersion) == 0)
+            this->ToGetSysInformations();
         return this->mEnvironmentAttr.softwareVersion;
     }
 
     const Jchar *GetSPVersion()
     {
-        this->ToGetSysInformations();
+        if (strlen(this->mEnvironmentAttr.spVersion) == 0)
+            this->ToGetSysInformations();
         return this->mEnvironmentAttr.spVersion;
     }
 
@@ -340,32 +369,8 @@ private:
         return (this->mPOSSDKSupport.context != nullptr);
     }
 
-    Jbool CallCount()
-    {
-        if (this->mPOSSDKSupport.count < ENVIRONMENT_MAX_CALL_INTERFACE_COUNT)
-        {
-            ++this->mPOSSDKSupport.count;
-            return false;
-        } else
-        {
-            this->mPOSSDKSupport.count = 0;
-            return true;
-        }
-    }
-
     void ToGetSysInformations()
     {
-        static Jbool state = false;
-
-        if (state)
-        {
-            if (!this->CallCount())
-                return;
-        } else
-        {
-            state = true;
-        }
-
         if (!this->Check())
             return;
 

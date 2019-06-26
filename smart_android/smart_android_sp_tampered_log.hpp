@@ -77,6 +77,8 @@ typedef struct
 
     Jint recordLen;
     SPTamperedLogRecord records[SP_TAMPERED_LOG_RECORD_MAX_SIZE];
+    SPTamperedLogRecord swapRecord;
+
     Jchar tmpCategoryStr[SP_TAMPERED_LOG_RECORD_TIME_SIZE];
     Jchar tmpTypeStr[SP_TAMPERED_LOG_RECORD_TIME_SIZE];
 } SPTamperedLogAttr;
@@ -247,6 +249,34 @@ private:
 
             ++j;
         }
+
+        for (i = 0; i < (this->mSPTamperedLogAttr.recordLen / 2); ++i)
+        {
+            auto &&start = i;
+            auto &&foot = this->mSPTamperedLogAttr.recordLen - 1 - i;
+
+            memset(&this->mSPTamperedLogAttr.swapRecord, 0, sizeof(this->mSPTamperedLogAttr.swapRecord));
+            memcpy(
+                &this->mSPTamperedLogAttr.swapRecord,
+                &this->mSPTamperedLogAttr.records[start],
+                sizeof(this->mSPTamperedLogAttr.records[start])
+            );
+
+            memset(&this->mSPTamperedLogAttr.records[start], 0, sizeof(this->mSPTamperedLogAttr.records[start]));
+            memcpy(
+                &this->mSPTamperedLogAttr.records[start],
+                &this->mSPTamperedLogAttr.records[foot],
+                sizeof(this->mSPTamperedLogAttr.records[foot])
+            );
+
+            memset(&this->mSPTamperedLogAttr.records[foot], 0, sizeof(this->mSPTamperedLogAttr.records[foot]));
+            memcpy(
+                &this->mSPTamperedLogAttr.records[foot],
+                &this->mSPTamperedLogAttr.swapRecord,
+                sizeof(this->mSPTamperedLogAttr.swapRecord)
+            );
+        }
+
         return true;
     }
 

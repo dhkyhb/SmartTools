@@ -66,6 +66,8 @@ constexpr Jchar SENSOR_POS_PLATFORM_PROTOCOL_IDENTIFIER_K21 = 0x22;
 constexpr Jchar SENSOR_POS_PLATFORM_PROTOCOL_IDENTIFIER_3255 = 0x0C;
 constexpr Jchar SENSOR_POS_PLATFORM_PROTOCOL_IDENTIFIER_M1902 = 0xCC;
 
+constexpr Jint SENSOR_POS_SP_STATE_CODE_IS_TAMPERED = 39322;
+
 class Sensor
 {
 public:
@@ -143,6 +145,15 @@ public:
                 &this->mPOSSDKSupport.sensorArrayLen
             );
 
+            if(this->mPOSSDKSupport.sensorCheckState == SENSOR_POS_SP_STATE_CODE_IS_TAMPERED)
+            {
+                Errors::Instance().SetErrorType<ErrorsType::POS_NEED_SHORT_SMALL_BATTERY_OR_REBOOT>();
+                return false;
+            }
+
+            if ((this->mPOSSDKSupport.sensorArray == nullptr) || (this->mPOSSDKSupport.sensorArrayLen < 1))
+                return false;
+
             this->mSensorAttr.srcSensorValueLen = this->mPOSSDKSupport.sensorArrayLen;
             memcpy(
                 this->mSensorAttr.srcSensorValue,
@@ -216,9 +227,6 @@ private:
         Jint step = 0;
         Juint routeCode = 0;
         Juint routeEnum = 0;
-
-        if ((this->mPOSSDKSupport.sensorArray == nullptr) || (this->mPOSSDKSupport.sensorArrayLen < 1))
-            return false;
 
         routeCode = this->mPOSSDKSupport.sensorArray[step];
         routeCode += static_cast<Juint>(this->mPOSSDKSupport.sensorArray[++step]) << 8u;

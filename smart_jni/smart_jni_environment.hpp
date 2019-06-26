@@ -41,6 +41,8 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetAsset(
 
     if ((env == nullptr) || (assetContex == nullptr))
         return self;
+    if (assetManager = AAssetManager_fromJava(env, assetContex);assetManager == nullptr)
+        return self;
 
     Config::Instance().Reset();
 
@@ -62,8 +64,6 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetAsset(
     {
         if (sysConfFile != nullptr)
             break;
-        if (assetManager = AAssetManager_fromJava(env, assetContex);assetManager == nullptr)
-            break;
 
         if (asset = AAssetManager_open(
                 assetManager,
@@ -78,7 +78,10 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetAsset(
         );
 
         AAsset_close(asset);
+    } while (false);
 
+    do
+    {
         if (asset = AAssetManager_open(
                 assetManager,
                 CONFIG_APP_DEFAULT_CA_CERT_PATH,
@@ -105,6 +108,19 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetAsset(
     return self;
 }
 
+JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetThreadLoopSize(
+    JNIEnv *env,
+    jobject self,
+    jint size
+)
+{
+    if ((env == nullptr) || (size < 1))
+        return self;
+
+    ThreadLoop::Instance().Init(size);
+    return self;
+}
+
 JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetSN(JNIEnv *env, jobject self, jstring sn)
 {
     const Jchar *cSN = nullptr;
@@ -119,18 +135,11 @@ JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetSN(JNIEnv 
     return self;
 }
 
-JNIEXPORT jobject JNICALL
-Java_cn_smartpeak_tools_SmartEnvironment_SetThreadLoopSize(JNIEnv *env, jobject self, jint size)
-{
-    if ((env == nullptr) || (size < 1))
-        return self;
-
-    ThreadLoop::Instance().Init(size);
-    return self;
-}
-
-JNIEXPORT jobject JNICALL
-Java_cn_smartpeak_tools_SmartEnvironment_SetDeviceModel(JNIEnv *env, jobject self, jstring model)
+JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetDeviceModel(
+    JNIEnv *env,
+    jobject self,
+    jstring model
+)
 {
     const Jchar *cModel = nullptr;
 
@@ -141,6 +150,42 @@ Java_cn_smartpeak_tools_SmartEnvironment_SetDeviceModel(JNIEnv *env, jobject sel
 
     Environment::Instance().SetDeviceModel(cModel);
     (*env).ReleaseStringUTFChars(model, cModel);
+    return self;
+}
+
+JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetCustomer(
+    JNIEnv *env,
+    jobject self,
+    jstring customer
+)
+{
+    const Jchar *cCustomer = nullptr;
+
+    if ((env == nullptr) || (customer == nullptr))
+        return self;
+    if (cCustomer = (*env).GetStringUTFChars(customer, JNI_FALSE);cCustomer == nullptr)
+        return self;
+
+    Environment::Instance().SetCustomer(cCustomer);
+    (*env).ReleaseStringUTFChars(customer, cCustomer);
+    return self;
+}
+
+JNIEXPORT jobject JNICALL Java_cn_smartpeak_tools_SmartEnvironment_SetSubCustomer(
+    JNIEnv *env,
+    jobject self,
+    jstring subCustomer
+)
+{
+    const Jchar *cSubCustomer = nullptr;
+
+    if ((env == nullptr) || (subCustomer == nullptr))
+        return self;
+    if (cSubCustomer = (*env).GetStringUTFChars(subCustomer, JNI_FALSE);cSubCustomer == nullptr)
+        return self;
+
+    Environment::Instance().SetSubCustomer(cSubCustomer);
+    (*env).ReleaseStringUTFChars(subCustomer, cSubCustomer);
     return self;
 }
 
